@@ -152,6 +152,7 @@ class KeenonConnector(FleetConnector):
 
         if state.battery is not None:
             kv["battery"] = state.battery / 100.0
+            kv["battery_percent"] = state.battery / 100.0
         if state.online_status is not None:
             kv["online_status"] = state.online_status
         if state.charge_status is not None:
