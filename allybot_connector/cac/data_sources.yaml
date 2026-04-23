@@ -1,0 +1,94 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# DataSourceDefinition objects configure how key-values appear in InOrbit.
+# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-ws-connected
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: WS Connected
+  source:
+    keyValue:
+      key: ws_connected
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-online-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-alive-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Alive Status
+  source:
+    keyValue:
+      key: alive_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-speed
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Speed
+  unit: m/s
+  source:
+    keyValue:
+      key: speed
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-robot-name
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Robot Name
+  source:
+    keyValue:
+      key: robot_name
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-map-name
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Active Map
+  source:
+    keyValue:
+      key: map_name
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-connector-version
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Connector Version
+  source:
+    keyValue:
+      key: connector_version
+  timeline: {}

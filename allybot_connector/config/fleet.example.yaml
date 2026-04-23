@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Allybot Connector — fleet configuration example
+# Copy to config/my_fleet.yaml and fill in your values.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: allybot
+
+# Position updates arrive via WebSocket regardless of this setting.
+update_freq: 1.0
+
+# account_id: your-inorbit-account-id
+
+connector_config:
+  # Ally Fleet server base URL (host + port).
+  base_url: http://116.205.178.152:28080
+  # Store password in config/.env as INORBIT_ALLYBOT_PASSWORD
+  username: DeliveranceENT
+  # password: Admin123
+
+fleet:
+  - robot_id: allybot-cleaner-1
+    # fleet_robot_id = robotId in REST / serial in App WS messages
+    fleet_robot_id: "6d70603da0cb3d00ba104a191770170b"
+
+  - robot_id: allybot-cleaner-2
+    fleet_robot_id: "ba17e07275ac9bb21cf964ecbe2bd5c8"
+

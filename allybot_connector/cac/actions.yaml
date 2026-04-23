@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects expose custom commands in the InOrbit UI.
+# The Ally Fleet Robot API does not expose control endpoints.
+# This connector is monitoring-only — no actions are defined.

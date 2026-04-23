@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# MissionTracking configures how InOrbit tracks missions for robots using this connector.
+# processingType: "api" for connectors that publish mission_tracking key-values directly.
+# Scope: use `tag/<ACCOUNT_ID>/<TAG_ID>` to target a robot group.
+
+# TODO: Uncomment and configure when the connector publishes mission tracking data.
+# If using edge mission execution, set execution.executor.type: edge and add
+# executeMission / cancelMission / updateMission ActionDefinitions at account scope.
+
+# kind: MissionTracking
+# apiVersion: v0.1
+# metadata:
+#   id: all
+#   # scope: tag/<ACCOUNT_ID>/<TAG_ID>
+# spec:
+#   processingType: ["api"]
+#   attributes:
+#     mission_tracking:
+#       - type: missionApi

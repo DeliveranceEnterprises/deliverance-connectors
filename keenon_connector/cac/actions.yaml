@@ -1,0 +1,220 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects expose custom commands in the InOrbit UI.
+# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-call-to-point
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Send to Point
+  group: Delivery
+  description: Send the robot to a specific delivery point.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: ""
+      input:
+        control: text
+    - name: point_id
+      type: string
+      value: ""
+      input:
+        control: text
+    - name: scene_code
+      type: string
+      value: ""
+      input:
+        control: text
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-return-to-origin
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Return to Origin
+  group: Delivery
+  description: Send the robot back to its home position (T-series food delivery).
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: return_to_origin
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-cancel-task
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Cancel Task
+  group: Delivery
+  description: Cancel an active delivery task by task number.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: cancel_task
+    - name: task_no
+      type: string
+      value: ""
+      input:
+        control: text
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-clean-recharge
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Return to Charger
+  group: Cleaning
+  description: Send the cleaning robot to its charging station.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: clean_recharge
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-clean-finish
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Finish Cleaning
+  group: Cleaning
+  description: End the current cleaning task.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: clean_finish
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-clean-pause
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Pause Cleaning
+  group: Cleaning
+  description: Pause the current cleaning task.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: clean_pause
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-clean-temporary-task
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Start Temporary Clean
+  group: Cleaning
+  description: >
+    Start an immediate cleaning task. area_id_list must be a JSON array
+    of area IDs (e.g. ["area1","area2"]).
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: clean_temporary_task
+    - name: area_id_list
+      type: string
+      value: "[]"
+      input:
+        control: text
+    - name: clean_model_id
+      type: string
+      value: "1"
+      input:
+        control: text
+    - name: clean_times
+      type: string
+      value: "1"
+      input:
+        control: text
+    - name: back_point_id
+      type: string
+      value: "1"
+      input:
+        control: text
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-open-cabin
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Open Cabin
+  group: Hotel
+  description: Open a delivery cabin door on a hotel robot.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: open_cabin
+    - name: cabin
+      type: string
+      value: "1"
+      input:
+        control: text
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-close-cabin
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  type: RunScript
+  label: Close Cabin
+  group: Hotel
+  description: Close a delivery cabin door on a hotel robot.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: close_cabin
+    - name: cabin
+      type: string
+      value: "1"
+      input:
+        control: text

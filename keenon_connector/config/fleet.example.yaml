@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Keenon Connector — fleet configuration example
+# Copy to config/my_fleet.yaml and fill in your values.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: keenon
+
+# Polling frequency for robot state (Hz). 1.0 = poll once per second.
+update_freq: 1.0
+
+# InOrbit account ID — required for CaC scope resolution.
+# account_id: your-inorbit-account-id
+
+connector_config:
+  # Keenon Cloud API base URL (region-specific).
+  # Options: https://console.peanut.keenonrobot.com (CN)
+  #          https://es.robotkeenon.com            (EU)
+  #          https://cloud.robotkeenon.com         (JP)
+  api_domain: https://es.robotkeenon.com
+
+  # OAuth2 client credentials (generate in the Keenon open-platform console).
+  client_id: your-client-id
+  client_secret: your-client-secret
+
+  # TLS verification — set to false only in development environments.
+  verify_ssl: true
+
+  # Webhook receiver — set a port to enable real-time Keenon push callbacks.
+  # Configure Keenon to POST to http://<this-host>:<port>/webhook.
+  # Leave unset (or null) to use polling only.
+  # webhook_host: "0.0.0.0"
+  # webhook_port: 8080
+
+fleet:
+  - robot_id: keenon-food-1
+    fleet_robot_id: "AA:BB:CC:DD:EE:01"
+    store_id: S00000001
+
+  - robot_id: keenon-hotel-1
+    fleet_robot_id: "AA:BB:CC:DD:EE:02"
+    store_id: S00000001
+
+  - robot_id: keenon-clean-1
+    fleet_robot_id: "34:7D:E4:98:A1:BA"
+    store_id: S00000001
+
+# Optional: pre-load a static map PNG instead of fetching from the API.
+# maps:
+#   dhads6:                       # must match the robot's sceneCode
+#     file: ./config/floor1.png
+#     map_id: dhads6
+#     map_label: "Floor 1"
+#     origin_x: 0.0
+#     origin_y: 0.0
+#     resolution: 0.05            # metres per pixel

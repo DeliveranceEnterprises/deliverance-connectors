@@ -1,0 +1,257 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# DataSourceDefinition objects configure how published key-values appear in
+# InOrbit dashboards and timelines.
+# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-battery
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Battery
+  unit: "%"
+  scale: 100
+  source:
+    keyValue:
+      key: battery
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-online-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-charge-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Charge Status
+  source:
+    keyValue:
+      key: charge_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-can-be-called
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Available
+  source:
+    keyValue:
+      key: can_be_called
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-robot-state
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Robot State
+  source:
+    keyValue:
+      key: robot_state
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-current-scene
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Current Scene
+  source:
+    keyValue:
+      key: current_scene
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-task-no
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Task Number
+  source:
+    keyValue:
+      key: task_no
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-task-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Task Status
+  source:
+    keyValue:
+      key: task_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-robot-model
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-app-version
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: App Version
+  source:
+    keyValue:
+      key: app_version
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-online-type
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Network Type
+  source:
+    keyValue:
+      key: online_type
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-elevator-status
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: In Elevator
+  source:
+    keyValue:
+      key: elevator_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-api-connected
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: API Connected
+  source:
+    keyValue:
+      key: api_connected
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-connector-version
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Connector Version
+  source:
+    keyValue:
+      key: connector_version
+  timeline: {}
+---
+# --- Cleaning-robot-specific data sources ---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-main-state
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Clean Main State
+  source:
+    keyValue:
+      key: clean_main_state
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-sub-state
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Clean Sub State
+  source:
+    keyValue:
+      key: clean_sub_state
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-faulting
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Fault
+  source:
+    keyValue:
+      key: clean_faulting
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-emergency-stop
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Emergency Stop
+  source:
+    keyValue:
+      key: clean_emergency_stop
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-bilge-tank
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Waste Tank
+  source:
+    keyValue:
+      key: clean_bilge_tank
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-clean-water-tank
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  label: Water Tank
+  source:
+    keyValue:
+      key: clean_water_tank
+  timeline: {}

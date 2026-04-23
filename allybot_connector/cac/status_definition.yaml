@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# StatusDefinition objects configure threshold-based fleet status rules.
+# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: allybot-ws-connected
+  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - false
+      status: ERROR
