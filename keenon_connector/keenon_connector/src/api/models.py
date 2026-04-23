@@ -5,7 +5,31 @@
 """Shared data models and helpers for the Keenon API integration."""
 
 import math
+import struct
 from dataclasses import dataclass, field
+
+# Standard Keenon map resolution (metres per pixel), confirmed empirically.
+KEENON_MAP_RESOLUTION = 0.05
+
+
+def png_dimensions(image: bytes) -> tuple[int, int]:
+    """Return (width, height) in pixels from a PNG file header."""
+    if len(image) < 24 or image[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("Not a valid PNG image")
+    width = struct.unpack(">I", image[16:20])[0]
+    height = struct.unpack(">I", image[20:24])[0]
+    return width, height
+
+
+def keenon_map_origin(width_px: int, height_px: int) -> tuple[float, float]:
+    """Return (origin_x, origin_y) in metres for a Keenon map image.
+
+    Keenon maps are centred on the robot navigation origin (0, 0), so the
+    bottom-left corner of a W×H image at 0.05 m/px is at (−W/2·res, −H/2·res).
+    """
+    half_w = width_px * KEENON_MAP_RESOLUTION / 2
+    half_h = height_px * KEENON_MAP_RESOLUTION / 2
+    return -half_w, -half_h
 
 ROBOT_STATE_MAP: dict[int, str] = {
     1: "on_task",

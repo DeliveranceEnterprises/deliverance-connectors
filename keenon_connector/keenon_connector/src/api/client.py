@@ -20,6 +20,7 @@ from tenacity import (
 logger = logging.getLogger(__name__)
 
 KEENON_SUCCESS = 610000
+KEENON_SUCCESS_ALT = 200  # some endpoints return 200 instead of 610000
 KEENON_TOKEN_EXPIRED = 610401
 # Refresh the token when this many seconds remain before expiry.
 TOKEN_REFRESH_MARGIN_S = 300.0
@@ -128,10 +129,10 @@ class KeenonAPIClient:
                 )
             raise ValueError(f"Keenon token error: {payload.get('msg')}")
 
-        if payload.get("code") != KEENON_SUCCESS:
-            raise ValueError(
-                f"Keenon API error {payload.get('code')}: {payload.get('msg')}"
-            )
+        code = payload.get("code")
+        msg = payload.get("msg") or payload.get("message", "")
+        if code not in (KEENON_SUCCESS, KEENON_SUCCESS_ALT) and str(msg).lower() != "success":
+            raise ValueError(f"Keenon API error {code}: {msg}")
         return payload.get("data")
 
     @_retry()
@@ -158,12 +159,22 @@ class KeenonAPIClient:
         return data if isinstance(data, list) else []
 
     async def get_robot_status(self, robot_id: str) -> list[dict]:
-        """Return robot status list from the scene API."""
+        """Return robot status list from the scene API.
+
+        The endpoint returns either a single robot object directly in ``data``
+        (observed in production) or a dict with a ``list`` key (as per the
+        API spec).  Both formats are normalised to a list.
+        """
         data = await self._get(
             "/api/open/scene/v1/robot/status", params={"robotId": robot_id}
         )
+        if isinstance(data, list):
+            return data
         if isinstance(data, dict):
-            return data.get("list", [])
+            if "list" in data:
+                return data["list"]
+            # Single robot object returned directly — wrap in a list.
+            return [data] if data else []
         return []
 
     async def get_robot_location(self, robot_sn: str) -> dict | None:

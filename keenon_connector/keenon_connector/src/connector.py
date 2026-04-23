@@ -19,12 +19,15 @@ from keenon_connector.src.api.data_poller import DataPoller
 from keenon_connector.src.api.models import (
     CLEAN_MAIN_STATE_MAP,
     CLEAN_SUB_STATE_MAP,
+    KEENON_MAP_RESOLUTION,
     ONLINE_TYPE_MAP,
     ROBOT_STATE_MAP,
     TANK_STATE_MAP,
     TASK_STATUS_MAP,
     WATER_TANK_STATE_MAP,
     RobotState,
+    keenon_map_origin,
+    png_dimensions,
 )
 from keenon_connector.src.api.webhook_receiver import KeenonWebhookReceiver
 from keenon_connector.src.commands import (
@@ -69,7 +72,7 @@ class KeenonConnector(FleetConnector):
 
     @property
     def _keenon_cfg(self):
-        return self._config.connector_config
+        return self.config.connector_config
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -90,10 +93,10 @@ class KeenonConnector(FleetConnector):
             client=self._api_client,
             robot_states=self._robot_states,
             fleet_id_to_store={
-                r.fleet_robot_id: r.store_id for r in self._config.fleet
+                r.fleet_robot_id: r.store_id for r in self.config.fleet
             },
             robot_id_to_fleet_id=self._robot_id_to_fleet_id,
-            update_freq=self._config.update_freq,
+            update_freq=self.config.update_freq,
         )
         self._data_poller.start()
 
@@ -128,13 +131,21 @@ class KeenonConnector(FleetConnector):
 
     def _publish_robot_data(self, robot_id: str, state: RobotState) -> None:
         if state.x is not None and state.y is not None and state.yaw is not None:
-            self.publish_robot_pose(
-                robot_id,
-                x=state.x,
-                y=state.y,
-                yaw=state.yaw,
-                frame_id=state.scene_code or "map",
-            )
+            if state.scene_code:
+                # Full path: publish_robot_pose handles map fetching.
+                self.publish_robot_pose(
+                    robot_id,
+                    x=state.x,
+                    y=state.y,
+                    yaw=state.yaw,
+                    frame_id=state.scene_code,
+                )
+            else:
+                # No scene assigned yet — publish pose directly to avoid the
+                # map-fetch loop that publish_robot_pose would trigger.
+                self._get_robot_session(robot_id).publish_pose(
+                    state.x, state.y, state.yaw
+                )
 
         kv: dict = {"connector_version": connector_version}
 
@@ -306,16 +317,24 @@ class KeenonConnector(FleetConnector):
             )
             if not image_bytes:
                 return None
+            width, height = png_dimensions(image_bytes)
+            origin_x, origin_y = keenon_map_origin(width, height)
             return MapConfigTemp(
                 image=image_bytes,
                 map_id=frame_id,
                 map_label=state.scene_name or frame_id,
-                origin_x=0.0,
-                origin_y=0.0,
-                resolution=0.05,
+                origin_x=origin_x,
+                origin_y=origin_y,
+                resolution=KEENON_MAP_RESOLUTION,
             )
         except Exception as exc:
-            self._logger.error("Map fetch failed for robot %s: %s", robot_id, exc)
+            if "610403" in str(exc):
+                self._logger.warning(
+                    "Map endpoint returned 610403 (no permission) — "
+                    "contact your Keenon administrator to grant map access."
+                )
+            else:
+                self._logger.warning("Map fetch failed for robot %s: %s", robot_id, exc)
             return None
 
     # ------------------------------------------------------------------
