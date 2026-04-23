@@ -4,7 +4,12 @@
 
 # DataSourceDefinition objects configure how published key-values appear in
 # InOrbit dashboards and timelines.
-# Replace rnLasGAxn5CP7bj32 and hSTlpyR8qtgjSfcT with your InOrbit account and tag IDs.
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+
+# mission_status is published directly by the connector as a raw key-value
+# ("Idle", "Mission", "Charging", "Error") and picked up by the account-level
+# mission_status DataSourceDefinition.  No tag-level override needed.
+---
 
 apiVersion: v0.1
 kind: DataSourceDefinition

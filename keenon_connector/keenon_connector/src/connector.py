@@ -6,6 +6,7 @@
 
 import json
 import logging
+import time
 from typing import override
 
 from inorbit_connector.commands import CommandFailure, CommandResultCode, parse_custom_command_args
@@ -165,6 +166,9 @@ class KeenonConnector(FleetConnector):
             kv["task_no"] = state.task_no
         if state.task_status is not None:
             kv["task_status"] = TASK_STATUS_MAP.get(state.task_status, str(state.task_status))
+        if state.task_no:
+            kv["mission_tracking"] = self._build_mission_report(state)
+        kv["mission_status"] = self._compute_mission_status(state)
         if state.robot_model:
             kv["robot_model"] = state.robot_model
         if state.app_version:
@@ -200,6 +204,63 @@ class KeenonConnector(FleetConnector):
                 )
 
         self.publish_robot_key_values(robot_id, **kv)
+
+    # task_status int → mode string for the Modes & Tags widget
+    _MODE_FROM_TASK_STATUS: dict[int, str] = {
+        1: "Mission",   # queued
+        2: "Mission",   # calling
+        3: "Mission",   # in_progress
+        4: "Idle",      # completed
+        5: "Idle",      # cancelled
+        6: "Mission",   # target_reached
+        7: "Mission",   # waiting
+        0: "Error",     # failed
+    }
+
+    def _compute_mission_status(self, state: "RobotState") -> str:
+        """Return the mode string published as the mission_status key-value.
+
+        InOrbit reads this value (via the account-level mission_status
+        DataSourceDefinition) to display the current mode in the Modes widget.
+        """
+        if not state.api_connected:
+            return "Error"
+        if state.charge_status == 1:
+            return "Charging"
+        if state.task_no and state.task_status is not None:
+            return self._MODE_FROM_TASK_STATUS.get(state.task_status, "Mission")
+        return "Idle"
+
+    # Keenon task_status (int) → InOrbit mission state string
+    _MISSION_STATE: dict[int, str] = {
+        1: "Executing",   # queued
+        2: "Executing",   # calling
+        3: "Executing",   # in_progress
+        4: "Completed",   # completed
+        5: "Canceled",    # cancelled
+        6: "Executing",   # target_reached (still active)
+        7: "Executing",   # waiting
+    }
+
+    def _build_mission_report(self, state: "RobotState") -> dict:
+        mission_state = self._MISSION_STATE.get(state.task_status or 0, "Executing")
+        in_progress = mission_state == "Executing"
+        report: dict = {
+            "missionId": state.task_no,
+            "inProgress": in_progress,
+            "state": mission_state,
+            "label": f"Keenon task {state.task_no}",
+            "startTs": state.task_start_ts or int(time.time() * 1000),
+            "data": {},
+            "status": "Error" if mission_state in ("Aborted",) else "OK",
+            "tasks": [{"taskId": "0", "label": "Delivery"}],
+            "completedPercent": 1.0 if mission_state == "Completed" else 0.0,
+        }
+        if in_progress:
+            report["currentTaskId"] = "0"
+        else:
+            report["endTs"] = int(time.time() * 1000)
+        return report
 
     # ------------------------------------------------------------------
     # Command handling
@@ -238,6 +299,7 @@ class KeenonConnector(FleetConnector):
                 )
                 state.task_no = task_no
                 state.task_status = 1  # queued
+                state.task_start_ts = int(time.time() * 1000)
 
             case CustomScripts.RETURN_TO_ORIGIN:
                 task_no = await self._api_client.return_to_origin(
@@ -246,6 +308,7 @@ class KeenonConnector(FleetConnector):
                 )
                 state.task_no = task_no
                 state.task_status = 1
+                state.task_start_ts = int(time.time() * 1000)
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)

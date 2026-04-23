@@ -2,21 +2,33 @@
 #
 # SPDX-License-Identifier: MIT
 
-# MissionTracking configures how InOrbit tracks missions for robots using this connector.
-# processingType: "api" for connectors that publish mission_tracking key-values directly.
-# Scope: use `tag/<ACCOUNT_ID>/<TAG_ID>` to target a robot group.
+# MissionTracking — Keenon Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+# Cloud API mode: connector publishes mission_tracking key-values directly.
+# No edge execution — Keenon manages task dispatch on its own.
 
-# TODO: Uncomment and configure when the connector publishes mission tracking data.
-# If using edge mission execution, set execution.executor.type: edge and add
-# executeMission / cancelMission / updateMission ActionDefinitions at account scope.
-
-# kind: MissionTracking
-# apiVersion: v0.1
-# metadata:
-#   id: all
-#   # scope: tag/<ACCOUNT_ID>/<TAG_ID>
-# spec:
-#   processingType: ["api"]
-#   attributes:
-#     mission_tracking:
-#       - type: missionApi
+apiVersion: v0.1
+kind: MissionTracking
+metadata:
+  id: all
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+spec:
+  processingType:
+    - api
+  autoClosePreviousMission: true
+  attributes:
+    mission_tracking:
+      type: missionApi
+  execution:
+    modes:
+      start: VLivdzZSG-Mr7hrJ  # Mission
+      end: tV3XEvE2zzfnVf8z    # Idle
+  stateDefinitions:
+    Executing:
+      defaultStatus: OK
+    Completed:
+      defaultStatus: OK
+    Canceled:
+      defaultStatus: error
+    Aborted:
+      defaultStatus: error

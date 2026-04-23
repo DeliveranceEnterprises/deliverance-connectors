@@ -175,5 +175,6 @@ class DataPoller:
         if not task_data:
             return
         state.task_status = task_data.get("taskStatus")
-        if state.task_status in TERMINAL_TASK_STATUSES:
-            state.task_no = None
+        # task_no is intentionally kept after reaching a terminal status so the
+        # connector can publish the final mission_tracking state.  It is cleared
+        # when the next task is dispatched.

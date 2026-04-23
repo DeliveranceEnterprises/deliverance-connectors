@@ -164,6 +164,7 @@ class RobotState:
     # Active task
     task_no: str | None = None
     task_status: int | None = None  # see TASK_STATUS_MAP
+    task_start_ts: int | None = None  # ms timestamp when task was dispatched
 
     # Cleaning-specific (populated only when robot_type == "clean")
     clean_main_state: int | None = None
