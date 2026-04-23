@@ -2,19 +2,20 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ActionDefinition objects expose custom commands in the InOrbit UI.
-# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+# ActionDefinition objects — Keenon Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+# Scene: Espaitec (x4JmTv)
 
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
-  id: keenon-call-to-point
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  id: keenon-send-to-mesa-1
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
-  label: Send to Point
+  label: "Send to Mesa 1"
   group: Delivery
-  description: Send the robot to a specific delivery point.
+  description: Send the robot to Mesa 1.
   confirmation:
     required: false
   lock: false
@@ -24,25 +25,73 @@ spec:
       value: call_to_point
     - name: point_uuid
       type: string
-      value: ""
-      input:
-        control: text
+      value: "3b2a81089aae8186d7c9a413725a3a5d"
     - name: point_id
       type: string
-      value: ""
-      input:
-        control: text
+      value: "4"
     - name: scene_code
       type: string
-      value: ""
-      input:
-        control: text
+      value: "x4JmTv"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-send-to-mesa-2
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+spec:
+  type: RunScript
+  label: "Send to Mesa 2"
+  group: Delivery
+  description: Send the robot to Mesa 2.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: "cec1284e136c488b3fd227a6b51b6b0a"
+    - name: point_id
+      type: string
+      value: "5"
+    - name: scene_code
+      type: string
+      value: "x4JmTv"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-send-to-mesa-3
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+spec:
+  type: RunScript
+  label: "Send to Mesa 3"
+  group: Delivery
+  description: Send the robot to Mesa 3.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: "bf13d6f6d4c31e00b678493da35aee41"
+    - name: point_id
+      type: string
+      value: "6"
+    - name: scene_code
+      type: string
+      value: "x4JmTv"
 ---
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-return-to-origin
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Return to Origin
@@ -60,7 +109,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-cancel-task
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Cancel Task
@@ -83,7 +132,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-recharge
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Return to Charger
@@ -101,7 +150,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-finish
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Finish Cleaning
@@ -119,7 +168,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-pause
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Pause Cleaning
@@ -137,7 +186,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-temporary-task
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Start Temporary Clean
@@ -177,7 +226,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-open-cabin
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Open Cabin
@@ -200,7 +249,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-close-cabin
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   type: RunScript
   label: Close Cabin

@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 # StatusDefinition objects configure threshold-based fleet status rules.
-# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+# Replace rnLasGAxn5CP7bj32 and hSTlpyR8qtgjSfcT with your InOrbit account and tag IDs.
 
 apiVersion: v0.1
 kind: StatusDefinition
 metadata:
   id: keenon-battery
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   rules:
     - function: BELOW
@@ -25,7 +25,7 @@ apiVersion: v0.1
 kind: StatusDefinition
 metadata:
   id: keenon-api-connected
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
 spec:
   rules:
     - function: EQUALS
