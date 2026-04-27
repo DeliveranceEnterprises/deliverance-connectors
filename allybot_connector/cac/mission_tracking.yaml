@@ -2,21 +2,26 @@
 #
 # SPDX-License-Identifier: MIT
 
-# MissionTracking configures how InOrbit tracks missions for robots using this connector.
-# processingType: "api" for connectors that publish mission_tracking key-values directly.
-# Scope: use `tag/<ACCOUNT_ID>/<TAG_ID>` to target a robot group.
+# MissionTracking — Allybot Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Allybot (StdZGa32GmBLReFr)
+# Cloud API mode: connector publishes mission_tracking key-values directly.
 
-# TODO: Uncomment and configure when the connector publishes mission tracking data.
-# If using edge mission execution, set execution.executor.type: edge and add
-# executeMission / cancelMission / updateMission ActionDefinitions at account scope.
-
-# kind: MissionTracking
-# apiVersion: v0.1
-# metadata:
-#   id: all
-#   # scope: tag/<ACCOUNT_ID>/<TAG_ID>
-# spec:
-#   processingType: ["api"]
-#   attributes:
-#     mission_tracking:
-#       - type: missionApi
+apiVersion: v0.1
+kind: MissionTracking
+metadata:
+  id: all
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  processingType:
+    - api
+  autoClosePreviousMission: true
+  attributes:
+    mission_tracking:
+      type: missionApi
+  stateDefinitions:
+    Executing:
+      defaultStatus: OK
+    Completed:
+      defaultStatus: OK
+    Canceled:
+      defaultStatus: error

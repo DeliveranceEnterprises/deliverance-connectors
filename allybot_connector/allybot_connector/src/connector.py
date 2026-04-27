@@ -188,7 +188,7 @@ class AllybotConnector(FleetConnector):
         # Battery and device status (from devicestatus WS)
         if state.battery is not None:
             kv["battery"] = state.battery / 100.0
-            kv["battery_percent"] = state.battery / 100.0
+            kv["battery_percent"] = int(state.battery)
         if state.work_status is not None:
             kv["work_status"] = state.work_status
         if state.have_task_running is not None:
@@ -208,7 +208,52 @@ class AllybotConnector(FleetConnector):
                 state.task_status_code, str(state.task_status_code)
             )
 
+        kv["mission_status"] = self._compute_mission_status(state)
+
+        if state.task_id:
+            kv["mission_tracking"] = self._build_mission_report(state)
+
         self.publish_robot_key_values(robot_id, **kv)
+
+    # task_status_code → InOrbit mission state string
+    # None means the task ended naturally (no explicit terminal code from WS)
+    _MISSION_STATE: dict[int | None, str] = {
+        3: "Executing",   # Starting
+        5: "Executing",   # Running
+        9: "Executing",   # Paused (still active)
+        None: "Completed",  # WS stream stopped → natural completion
+    }
+
+    def _build_mission_report(self, state: AllybotRobotState) -> dict:
+        mission_state = self._MISSION_STATE.get(state.task_status_code, "Completed")
+        in_progress = state.have_task_running or False
+        report: dict = {
+            "missionId": state.task_id,
+            "inProgress": in_progress,
+            "state": mission_state,
+            "label": state.task_name or state.task_id,
+            "startTs": state.task_start_ts or int(time.time() * 1000),
+            "data": {},
+            "status": "OK",
+            "tasks": [{"taskId": "0", "label": state.task_name or "Cleaning"}],
+            "completedPercent": (state.task_percentage or 0.0) / 100.0,
+        }
+        if in_progress:
+            report["currentTaskId"] = "0"
+        else:
+            report["endTs"] = int(time.time() * 1000)
+        return report
+
+    def _compute_mission_status(self, state: AllybotRobotState) -> str:
+        if not state.ws_connected:
+            return "Error"
+        if state.have_task_running:
+            if state.task_status_code == 9:  # Paused
+                return "Paused"
+            return "Mission"
+        if state.work_status == "Charging":
+            return "Charging"
+        return "Idle"
 
     # ------------------------------------------------------------------
     # Map fetching

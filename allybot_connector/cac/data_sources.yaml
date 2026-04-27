@@ -5,6 +5,22 @@
 # DataSourceDefinition objects configure how key-values appear in InOrbit.
 # Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Allybot (StdZGa32GmBLReFr)
 
+# Override the account-level mission_status DataSource so the Modes & Tags widget
+# reads the mission_status key-value published by this connector.
+# Values: "Idle", "Mission", "Paused", "Charging", "Error"
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: mission_status
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Mission Status
+  source:
+    keyValue:
+      key: mission_status
+  timeline: {}
+---
+
 apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:

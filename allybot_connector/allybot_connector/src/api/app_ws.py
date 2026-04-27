@@ -229,15 +229,12 @@ class AllybotAppWebSocket:
         state.work_status = data.get("work_status")
         have_task = data.get("haveTaskRunning")
         if have_task is not None:
+            prev = state.have_task_running
             state.have_task_running = bool(have_task)
-
-        # Clear task fields when no task is running
-        if not state.have_task_running and data.get("clean") is None:
-            state.task_id = None
-            state.task_name = None
-            state.task_percentage = None
-            state.task_status_code = None
-            state.task_start_ts = None
+            # Task just finished — mark complete so the connector can publish
+            # a final mission_tracking entry before clearing state next cycle.
+            if prev and not state.have_task_running:
+                state.task_status_code = None  # signals natural completion
 
     def _mark_all_disconnected(self) -> None:
         for state in self._robot_states.values():
