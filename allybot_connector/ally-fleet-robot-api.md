@@ -762,6 +762,364 @@ curl -X GET -H 'x-token: <JWT>' \
 
 ---
 
+## Task Control Endpoints (verified 2026-04-27)
+
+These endpoints drive the full lifecycle of a cleaning task on a robot:
+list available tasks → optional reachability check → start → pause / resume / cancel.
+All requests use the standard `/fleetapi` headers documented under
+[Device Endpoints](#device-endpoints) (`Token`, `Mobile-User-Id`, `X-Api-Version: 184`,
+`Language`, `Robot-Id: <null>`).
+
+### Standard Task-Control Headers
+
+```
+Token: <token>
+Mobile-User-Id: <openid>
+X-Api-Version: 184
+Language: en_US
+Content-Type: application/x-www-form-urlencoded
+Robot-Id: <null>
+```
+
+> Authentication for these endpoints is duplicated in **both** the `Token` /
+> `Mobile-User-Id` headers **and** the `openid` / `token` body or query parameters.
+> Both sets are sent in the captured traffic — include both for compatibility.
+
+---
+
+### List Cleaning Tasks for a Robot
+
+Returns the saved cleaning schedules / tasks for a robot. Use the returned `id`
+as `taskId` when starting a task.
+
+```
+POST /fleetapi/clean/list
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Body Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | string | yes | Robot device ID |
+| page | int | yes | Page index (1-based) |
+| pageSize | int | yes | Page size |
+| type | int | yes | Task type filter (`0` = all) |
+| openid | string | yes | Mobile user ID |
+| token | string | yes | Auth token |
+
+**Example Request:**
+
+```bash
+curl -X POST \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "id=6d70603da0cb3d00ba104a191770170b&page=1&pageSize=20&type=0&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
+  "http://116.205.178.152:28080/fleetapi/clean/list"
+```
+
+**Response:**
+
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "generalMessage": null,
+  "data": [
+    {
+      "id": "ae3178a170b0f97b40e783e7f9dad747",
+      "name": "Espaitec",
+      "time": "09:30:58-15:43:58",
+      "start": "09:30:58",
+      "end": "15:43:58",
+      "status": 1,
+      "mode": "3",
+      "modeType": "1",
+      "scheType": "4",
+      "scheDate": "2,3,4,5,6",
+      "isDefault": 0,
+      "repeat": 1,
+      "mapName": "DELIVERANCE",
+      "daySpan": null,
+      "carpetType": null
+    }
+  ]
+}
+```
+
+**Key Task Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Task ID — pass as `taskId` to start the task |
+| `name` | string | Task name |
+| `status` | int | `1` = active schedule, `0` = inactive |
+| `mode` / `modeType` | string | Cleaning mode |
+| `scheType` | string | Schedule type (`1` = once, `4` = weekly recurring) |
+| `scheDate` | string | Days of week, comma-separated (`2,3,4,5,6` = Mon–Fri) |
+| `start` / `end` | string | Daily start / end time |
+| `mapName` | string | Map this task runs on |
+| `isDefault` | int | `1` = default task |
+
+---
+
+### Check Task Plan Reachability (pre-flight)
+
+Optional pre-flight check before starting a task — confirms that the robot can
+reach the task's start point on its current map. Always called by the mobile
+app immediately before `clean/default/start`.
+
+```
+GET /fleetapi/task/plan/reachable
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| robotId | string | yes | Robot device ID |
+| taskId | string | yes | Task ID (from `clean/list`) |
+| planId | string | no | Plan ID (leave empty for default) |
+
+**Example Request:**
+
+```bash
+curl -X GET \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  "http://116.205.178.152:28080/fleetapi/task/plan/reachable?planId=&robotId=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747"
+```
+
+**Response (map mismatch warning):**
+
+```json
+{
+  "code": 200,
+  "message": "The current map is \"DELIVERANCE\", please confirm whether it is consistent with the location of the robot",
+  "generalMessage": null,
+  "data": null
+}
+```
+
+> The `code: 200` is returned even when the server is asking the user to confirm
+> the active map — `message` carries the human-readable warning. Surface the
+> `message` to the operator before sending `clean/default/start`.
+
+---
+
+### Start a Task
+
+Dispatches the named task to the robot. The robot transitions out of `Charging`
+and begins navigating to the task's first waypoint.
+
+```
+POST /fleetapi/clean/default/start
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Body Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | string | yes | Robot device ID |
+| taskId | string | yes | Task ID to run (from `clean/list`) |
+| reachChargePoint | bool | yes | `true` = robot returns to dock after task; `false` = stay where it finished |
+| openid | string | yes | Mobile user ID |
+| token | string | yes | Auth token |
+
+**Example Request:**
+
+```bash
+curl -X POST \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "id=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747&reachChargePoint=false&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
+  "http://116.205.178.152:28080/fleetapi/clean/default/start"
+```
+
+**Response (success):**
+
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "generalMessage": null,
+  "data": true
+}
+```
+
+`data: true` confirms the task was accepted and dispatched. After ~5–10 seconds,
+`device/usestatus` will reflect `haveTaskRunning: true` and `work_status` will
+change from `"Charging"` to the task's working state.
+
+---
+
+### Get Running Task Path
+
+Returns the live planned path of the currently running task. Returns `data: null`
+when no task is running or the path has not yet been computed.
+
+```
+GET /fleetapi/task/plan/path/running
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| robotId | string | yes | Robot device ID |
+
+**Example Request:**
+
+```bash
+curl -X GET \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  "http://116.205.178.152:28080/fleetapi/task/plan/path/running?robotId=6d70603da0cb3d00ba104a191770170b"
+```
+
+**Response:**
+
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "generalMessage": null,
+  "data": null
+}
+```
+
+> The mobile app polls this endpoint shortly after `clean/default/start` to
+> render the live route on the map. Live position updates come from the App
+> WebSocket (`device_position`), not this endpoint.
+
+---
+
+### Pause / Resume / Cancel a Running Task
+
+A single endpoint controls every state transition on a running task. The action
+is selected by the `type` query parameter.
+
+```
+POST /fleetapi/device/taskaction
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| openid | string | yes | Mobile user ID |
+| token | string | yes | Auth token |
+| id | string | yes | Robot device ID |
+| type | int | yes | Action — see table below |
+
+**`type` action mapping:**
+
+| `type` | Action | When to use |
+|--------|--------|-------------|
+| `0` | **Resume / Continue** | Resume a paused task |
+| `1` | **Pause** | Suspend the running task; robot stops in place |
+| `2` | **Stop / Cancel** | Cancel the running task; robot exits the working state |
+
+**Body:** empty (`Content-Length: 0`). All parameters travel in the query string.
+
+**Example — Pause (`type=1`):**
+
+```bash
+curl -X POST \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "Content-Length: 0" \
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=1"
+```
+
+**Example — Resume (`type=0`):**
+
+```bash
+curl -X POST \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "Content-Length: 0" \
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=0"
+```
+
+**Example — Cancel / Stop (`type=2`):**
+
+```bash
+curl -X POST \
+  -H "Token: <token>" \
+  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "X-Api-Version: 184" \
+  -H "Language: en_US" \
+  -H "Robot-Id: <null>" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "Content-Length: 0" \
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=2"
+```
+
+**Response (all three actions):**
+
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "generalMessage": null,
+  "data": null
+}
+```
+
+Confirm the new state by polling `POST /fleetapi/device/usestatus` (look at
+`work_status` and `haveTaskRunning`) or by listening to `TASK_STATUS` /
+`ROBOT` messages on the WebSocket.
+
+---
+
+### Task Lifecycle — Captured Sequence
+
+The following request sequence was captured end-to-end on 2026-04-27 against
+robot `6d70603da0cb3d00ba104a191770170b` (task `Espaitec`,
+id `ae3178a170b0f97b40e783e7f9dad747`):
+
+| Δt | Method | Endpoint | Effect |
+|----|--------|----------|--------|
+| 0 s | `POST` | `/fleetapi/device/usestatus` | Snapshot — robot was `Charging`, `haveTaskRunning: false` |
+| +0 s | `POST` | `/fleetapi/clean/list` | Discover available tasks (returned `Espaitec`) |
+| +2 s | `GET`  | `/fleetapi/task/plan/reachable` | Pre-flight reachability check |
+| +4 s | `POST` | `/fleetapi/clean/default/start` | **Start** — `data: true` |
+| +13 s | `GET` | `/fleetapi/task/plan/path/running` | Poll planned path |
+| +24 s | `POST` | `/fleetapi/device/taskaction?type=1` | **Pause** |
+| +31 s | `POST` | `/fleetapi/device/taskaction?type=0` | **Resume** |
+| +40 s | `POST` | `/fleetapi/device/taskaction?type=2` | **Cancel / Stop** |
+
+---
+
 ## User Endpoints
 
 ### Register
@@ -1020,7 +1378,10 @@ Three WebSocket sources exist, in priority order:
 - Password must be **base64-encoded** in the login `POST` body.
 - Requires application-level **JSON ping every 20 seconds**: `{"type": "ping", "language": "en_US"}`.
 - Server responds with `{"type": "pong"}`.
-- Delivers `device_position` messages with live x/y coordinates whenever the robot is localized.
+- Delivers three message types at ~1 Hz each:
+  - `device_position` — live x/y coordinates whenever the robot is localized
+  - `devicestasktatus` — running task progress (`percent`, `taskStatus`, area, cycles) — see [Task Status Message](#task-status-message)
+  - `devicestatus` — full device snapshot including `data.clean` task summary — see [Alternate Progress Source](#alternate-progress-source--devicestatus-message)
 
 **Login (base64 password):**
 
@@ -1266,46 +1627,145 @@ Provides the full task queue for a robot, including task details and individual 
 
 ### Task Status Message
 
-**Type:** `TASK_STATUS`
+**Type on App WS:** `devicestasktatus` *(yes — that spelling is what the wire format
+uses; the Direct WS reports it as `TASK_STATUS`)*
 
-Real-time progress of the currently running task.
+Real-time progress of the currently running task. Pushed once per second
+on the App WebSocket while a task is active.
+
+**Observed wire format (App WS, captured 2026-04-27):**
 
 ```json
 {
-  "type": "TASK_STATUS",
-  "content": {
-    "taskName": "front",
-    "robotId": "ba17e07275ac9bb21cf964ecbe2bd5c8",
-    "startTime": 1638956793000,
-    "percentage": 0,
-    "workingScope": 8.147312,
-    "currCircle": 1,
-    "totalCircle": 1,
-    "workingTime": 0,
-    "trace": null,
-    "globalPlanRoute": [
-      { "x": -0.47, "y": 0.93, "z": 0 },
-      { "x": -1.12, "y": 0.63, "z": 0 },
-      { "x": -3.595, "y": -1.92, "z": 0 }
-    ],
-    "taskStatus": 3
+  "type": "devicestasktatus",
+  "uuid": "1777296013173",
+  "robotid": "6d70603da0cb3d00ba104a191770170b",
+  "taskId": "ae3178a170b0f97b40e783e7f9dad747",
+  "name": "Espaitec",
+  "time": "21:20:05",
+  "area": "0.0",
+  "hour": 0,
+  "percent": 0,
+  "taskStatus": 3,
+  "msg": "{\"taskName\":\"Espaitec\",\"robotId\":\"6d70603da0cb3d00ba104a191770170b\",\"taskId\":\"ae3178a170b0f97b40e783e7f9dad747\",\"startTime\":1777296005000,\"percentage\":0,\"workingScope\":0.0,\"currCircle\":1,\"totalCircle\":2,\"workingTime\":0,\"totalTime\":3,\"planId\":\"ac8c95b30ca2942e345f721f184107c2\",\"trace\":null,\"globalPlanRoute\":null,\"taskStatus\":3}"
+}
+```
+
+> Like `device_position`, the inner `msg` field is a **JSON-encoded string** —
+> parse it with a second `json.loads()` call.
+
+**Outer fields (top-level JSON):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Always `devicestasktatus` on the App WS |
+| `robotid` | string | Robot device ID (note lowercase `i`) |
+| `taskId` | string | ID of the currently running task |
+| `name` | string | Task name |
+| `time` | string | Task start clock time (`HH:MM:SS`, local) |
+| `area` | string | Cleaned area so far in m² (string, e.g. `"0.0"`) |
+| `hour` | int | Working time so far (hours) |
+| `percent` | float | **Completion percentage 0–100** — mirrors `msg.percentage` |
+| `taskStatus` | int | **Task state code — see table below** — mirrors `msg.taskStatus` |
+| `uuid` | string | Server-assigned message ID (epoch ms) |
+| `msg` | string | JSON-encoded inner payload (parse separately) |
+
+**Inner `msg` fields (after JSON-decoding):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `taskName` | string | Task name |
+| `robotId` | string | Robot device ID |
+| `taskId` | string | Task ID |
+| `planId` | string | Active plan ID for this task |
+| `startTime` | long | Start timestamp (epoch ms) |
+| `percentage` | float | **Completion percentage 0–100** |
+| `workingScope` | float | Total working area (m²) |
+| `workingTime` | int | Elapsed working time |
+| `totalTime` | int | Estimated total time |
+| `currCircle` | int | Current cycle / pass number |
+| `totalCircle` | int | Total cycles in this task |
+| `taskStatus` | int | Task state code |
+| `trace` | object | Movement trace (null until robot has moved) |
+| `globalPlanRoute` | array | Planned route `[{x, y, z}, ...]` (may be null early in task) |
+
+**Captured `taskStatus` codes (full lifecycle):**
+
+| Code | Meaning | Observed transition |
+|------|---------|---------------------|
+| `3` | **Starting / dispatching** | Sent immediately after `clean/default/start` |
+| `5` | **Running** (executing) | ~1.3 s after `taskStatus: 3` |
+| `9` | **Paused** | Sent immediately after `taskaction?type=1` |
+| `5` | **Running** (resumed) | Sent immediately after `taskaction?type=0` |
+| *(message stream stops)* | **Cancelled / stopped** | Last `devicestasktatus` arrives just before `taskaction?type=2`; no more messages after cancel |
+
+> The `percent` / `percentage` field is the **primary source** for task progress.
+> In the captured run the task was paused and cancelled before any real area was
+> covered, so percentage stayed at `0` throughout — but the field is updated
+> live as the robot works.
+
+**Observed update rate:** ~1 Hz on the App WebSocket while a task is active.
+
+---
+
+### Alternate Progress Source — `devicestatus` Message
+
+The same App WebSocket also pushes `devicestatus` messages (~1 Hz). When a task
+is running, the `data.clean` object carries a parallel summary of progress:
+
+```json
+{
+  "type": "devicestatus",
+  "uuid": 1777296023105,
+  "code": 200,
+  "data": {
+    "id": "6d70603da0cb3d00ba104a191770170b",
+    "name": "202352CNW002D0156",
+    "battery": 67,
+    "freshWater": 42,
+    "sewageWater": 0,
+    "online": "Online",
+    "work_status": "Operating",
+    "haveTaskRunning": true,
+    "navStatus": 2,
+    "location": true,
+    "clean": {
+      "title": "Espaitec",
+      "task_mode": "Scrubbing.Standard",
+      "start": "21:20:05",
+      "end": "",
+      "area": 0,
+      "use_hour": 0,
+      "left_hour": 3,
+      "percent": 0,
+      "repeat": 12,
+      "date": "",
+      "date_type": "",
+      "mode_type": null
+    }
   }
 }
 ```
 
+**Key `clean` fields for progress tracking:**
+
 | Field | Type | Description |
 |-------|------|-------------|
-| taskName | string | Task name |
-| robotId | string | Robot ID |
-| startTime | long | Start timestamp (ms) |
-| percentage | float | Completion percentage |
-| workingScope | float | Working area (m²) |
-| currCircle | int | Current cycle number |
-| totalCircle | int | Total cycles |
-| workingTime | int | Working time |
-| trace | object | Movement trace |
-| globalPlanRoute | array | Planned route points `[{x, y, z}, ...]` |
-| taskStatus | int | Task status code |
+| `clean.title` | string | Running task name |
+| `clean.percent` | float | Completion percentage 0–100 |
+| `clean.area` | float | Cleaned area so far (m²) |
+| `clean.use_hour` | float | Elapsed working time (hours) |
+| `clean.left_hour` | float | Estimated remaining time (hours) |
+| `clean.start` | string | Start clock time (`HH:MM:SS`) |
+| `clean.task_mode` | string | Cleaning mode (e.g. `"Scrubbing.Standard"`) |
+
+When no task is running, `clean` is `null`. `data.haveTaskRunning` and
+`data.work_status` (`"Charging"` / `"Idle"` / `"Operating"`) are simpler boolean /
+enum signals on the same message.
+
+> **For progress tracking:** prefer `devicestasktatus` (richer fields,
+> includes `taskStatus` state machine). Fall back to `devicestatus.data.clean`
+> when only the high-level percent/area/time is needed.
 
 ---
 
@@ -1560,6 +2020,16 @@ curl -X GET \
 | `device/usemap` | No | Internet | Map metadata/origin only |
 | Fleet WS `ROBOT_GESTURE` | No | Internet | Robot not connected to fleet WS server |
 
+### Task Progress Data Availability
+
+| Source | % complete? | State machine? | Update rate | Notes |
+|--------|-------------|----------------|-------------|-------|
+| App WS `devicestasktatus` | **Yes** (`percent` / `msg.percentage`) | **Yes** (`taskStatus` codes 3 / 5 / 9) | ~1 Hz | **Primary source.** Also exposes area, working time, current cycle, total cycles |
+| App WS `devicestatus.data.clean` | **Yes** (`clean.percent`) | No (only `haveTaskRunning` bool + `work_status` enum) | ~1 Hz | Has area, elapsed/remaining hours; `clean` is `null` when idle |
+| Direct WS `TASK_STATUS` | Yes | Yes | n/a | Local-network only; same payload schema as `devicestasktatus.msg` |
+| REST `device/usestatus` | No | No | On request | Only `haveTaskRunning` bool and `work_status` string |
+| REST `task/plan/path/running` | No | No | On request | Returns the planned route, not progress |
+
 ### robot/binding Returns 513
 
 `GET /robot/binding` returns `code: 513` (`"OPERACIÓN FALLIDA"`) when `aliveStatus: 2`
@@ -1589,12 +2059,19 @@ in `robot/singleRobotInfo`. This means the robot is connected to the consumer mo
 | GET | `/robot/robotPage` | List org robots (paginated) |
 | GET | `/robot/binding` | Subscribe to robot realtime messages (returns 513 if `aliveStatus: 2`) |
 | GET | `/task/task` | Get task information |
+| POST | `/fleetapi/clean/list` | List cleaning tasks/schedules for a robot |
+| GET | `/fleetapi/task/plan/reachable` | Pre-flight: confirm task plan is reachable on current map |
+| POST | `/fleetapi/clean/default/start` | **Start** a task on a robot (returns `data: true`) |
+| GET | `/fleetapi/task/plan/path/running` | Get the live planned path of the running task |
+| POST | `/fleetapi/device/taskaction?type=0` | **Resume** a paused task |
+| POST | `/fleetapi/device/taskaction?type=1` | **Pause** the running task |
+| POST | `/fleetapi/device/taskaction?type=2` | **Stop / Cancel** the running task |
 | POST | `/user/register` | Register new user |
 | POST | `/user/login` | User login |
 | GET | `/user/info` | Get user info |
 | GET | `/project/allProject` | Get user projects (paginated) |
 | POST | `/user/logout` | User logout |
 | POST | `/fleetapi/device/usemap` | Get active map for a robot (mapId, origin, resolution, image URL) |
-| WS | `ws://host:28080/fleetapi/websocketapp/{openid}/{token}` | App WS: live position (`device_position`), internet-accessible |
+| WS | `ws://host:28080/fleetapi/websocketapp/{openid}/{token}` | App WS: live position (`device_position`), task progress (`devicestasktatus`, `devicestatus.data.clean`), internet-accessible |
 | WS | `ws://robot-ip:29997/robot` | Direct WS: position + chassis state, local network only |
 | WS | `ws://host:28081/robot` | Fleet WS: fallback, non-standard handshake, currently no data |

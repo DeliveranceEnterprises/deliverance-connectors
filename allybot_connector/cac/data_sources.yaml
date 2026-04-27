@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 # DataSourceDefinition objects configure how key-values appear in InOrbit.
-# Replace [ACCOUNT_ID] and [TAG_ID] with your InOrbit account and tag IDs.
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Allybot (StdZGa32GmBLReFr)
 
 apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-ws-connected
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: WS Connected
   source:
@@ -22,7 +22,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-online-status
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Online
   source:
@@ -35,7 +35,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-alive-status
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Alive Status
   source:
@@ -47,7 +47,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-speed
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Speed
   unit: m/s
@@ -61,7 +61,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-robot-name
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Robot Name
   source:
@@ -73,7 +73,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-map-name
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Active Map
   source:
@@ -85,10 +85,116 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: allybot-connector-version
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   label: Connector Version
   source:
     keyValue:
       key: connector_version
   timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-battery
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Battery
+  unit: "%"
+  scale: 100
+  source:
+    keyValue:
+      key: battery
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-work-status
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Work Status
+  source:
+    keyValue:
+      key: work_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-have-task-running
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Task Running
+  source:
+    keyValue:
+      key: have_task_running
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-task-name
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Task Name
+  source:
+    keyValue:
+      key: task_name
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-task-percentage
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Task Progress
+  unit: "%"
+  source:
+    keyValue:
+      key: task_percentage
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-task-status
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Task Status
+  source:
+    keyValue:
+      key: task_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-fresh-water
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Fresh Water
+  unit: "%"
+  source:
+    keyValue:
+      key: fresh_water
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-sewage-water
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Sewage Water
+  unit: "%"
+  source:
+    keyValue:
+      key: sewage_water
+  timeline:
+    fieldType: number

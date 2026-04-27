@@ -9,13 +9,16 @@ import logging
 import time
 from typing import override
 
+from inorbit_connector.commands import CommandFailure, CommandResultCode, parse_custom_command_args
 from inorbit_connector.connector import FleetConnector
 from inorbit_connector.models import MapConfigTemp
+from inorbit_edge.robot import COMMAND_CUSTOM_COMMAND
 
 from allybot_connector import __version__ as connector_version
 from allybot_connector.src.api.app_ws import AllybotAppWebSocket
 from allybot_connector.src.api.client import AllybotAPIClient
-from allybot_connector.src.api.models import ALIVE_STATUS_MAP, AllybotRobotState
+from allybot_connector.src.api.models import ALIVE_STATUS_MAP, TASK_STATUS_MAP, AllybotRobotState
+from allybot_connector.src.commands import CustomScripts, StartTaskCommand
 from allybot_connector.src.config.models import AllybotConnectorConfig, AllybotRobotConfig
 
 logger = logging.getLogger(__name__)
@@ -182,6 +185,29 @@ class AllybotConnector(FleetConnector):
             kv["online_status"] = state.alive_status in (1, 2)
             kv["alive_status"] = ALIVE_STATUS_MAP.get(state.alive_status, str(state.alive_status))
 
+        # Battery and device status (from devicestatus WS)
+        if state.battery is not None:
+            kv["battery"] = state.battery / 100.0
+            kv["battery_percent"] = state.battery / 100.0
+        if state.work_status is not None:
+            kv["work_status"] = state.work_status
+        if state.have_task_running is not None:
+            kv["have_task_running"] = state.have_task_running
+        if state.fresh_water is not None:
+            kv["fresh_water"] = state.fresh_water
+        if state.sewage_water is not None:
+            kv["sewage_water"] = state.sewage_water
+
+        # Task progress (from devicestasktatus WS)
+        if state.task_name:
+            kv["task_name"] = state.task_name
+        if state.task_percentage is not None:
+            kv["task_percentage"] = state.task_percentage
+        if state.task_status_code is not None:
+            kv["task_status"] = TASK_STATUS_MAP.get(
+                state.task_status_code, str(state.task_status_code)
+            )
+
         self.publish_robot_key_values(robot_id, **kv)
 
     # ------------------------------------------------------------------
@@ -226,16 +252,57 @@ class AllybotConnector(FleetConnector):
         )
 
     # ------------------------------------------------------------------
-    # Command handler (no-op — monitoring only)
+    # Command handler
     # ------------------------------------------------------------------
 
     @override
     async def _inorbit_robot_command_handler(
         self, robot_id: str, command_name: str, args: list, options: dict
     ) -> None:
-        # No commands supported — log and ignore.
-        self._logger.debug(
-            "Ignoring command '%s' for robot '%s' (monitoring-only connector)",
-            command_name,
-            robot_id,
-        )
+        if command_name != COMMAND_CUSTOM_COMMAND:
+            return
+
+        if self._api_client is None:
+            raise CommandFailure(
+                execution_status_details="API client not connected",
+                stderr="Connector is not yet connected to the Allybot API",
+            )
+
+        result_fn = options["result_function"]
+        script_name, script_args = parse_custom_command_args(args)
+        fleet_id = self._robot_id_to_fleet_id[robot_id]
+        state = self._robot_states[robot_id]
+
+        match script_name:
+            case CustomScripts.START_TASK:
+                cmd = StartTaskCommand.model_validate(script_args)
+                await self._api_client.start_task(
+                    device_id=fleet_id,
+                    task_id=cmd.task_id,
+                    reach_charge_point=cmd.reach_charge_point,
+                )
+                state.task_id = cmd.task_id
+                state.task_status_code = 3  # Starting
+
+            case CustomScripts.PAUSE_TASK:
+                await self._api_client.task_action(device_id=fleet_id, action_type=1)
+                state.task_status_code = 9  # Paused
+
+            case CustomScripts.RESUME_TASK:
+                await self._api_client.task_action(device_id=fleet_id, action_type=0)
+                state.task_status_code = 5  # Running
+
+            case CustomScripts.STOP_TASK:
+                await self._api_client.task_action(device_id=fleet_id, action_type=2)
+                state.task_id = None
+                state.task_name = None
+                state.task_percentage = None
+                state.task_status_code = None
+
+            case _:
+                raise CommandFailure(
+                    execution_status_details=f"Unknown command: {script_name}",
+                    stderr=f"Command '{script_name}' is not supported",
+                )
+
+        result_fn(CommandResultCode.SUCCESS)

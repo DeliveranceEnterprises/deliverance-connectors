@@ -121,6 +121,10 @@ class AllybotAppWebSocket:
         match body.get("type"):
             case "device_position":
                 self._on_device_position(body)
+            case "devicestasktatus":
+                self._on_task_status(body)
+            case "devicestatus":
+                self._on_device_status(body)
             case "pong":
                 pass  # keepalive acknowledgement
 
@@ -159,6 +163,81 @@ class AllybotAppWebSocket:
 
         state.ws_connected = True
         state.last_ws_message = time.time()
+
+    def _on_task_status(self, body: dict) -> None:
+        """Handle devicestasktatus — real-time task progress (~1 Hz while task active)."""
+        robot_serial = body.get("robotid", "")
+        robot_id = self._fleet_serial_to_robot_id.get(robot_serial)
+        if not robot_id:
+            return
+        state = self._robot_states.get(robot_id)
+        if not state:
+            return
+
+        state.task_id = body.get("taskId")
+        state.task_name = body.get("name")
+        state.task_status_code = body.get("taskStatus")
+
+        percent = body.get("percent")
+        if percent is not None:
+            try:
+                state.task_percentage = float(percent)
+            except (TypeError, ValueError):
+                pass
+
+        # Parse inner msg for startTime
+        msg_str = body.get("msg", "")
+        try:
+            inner = json.loads(msg_str)
+            if state.task_start_ts is None and inner.get("startTime"):
+                state.task_start_ts = int(inner["startTime"])
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    def _on_device_status(self, body: dict) -> None:
+        """Handle devicestatus — full device snapshot including battery and work_status (~1 Hz)."""
+        data = body.get("data") or {}
+        device_id = data.get("id", "")
+        robot_id = self._fleet_serial_to_robot_id.get(device_id)
+        if not robot_id:
+            return
+        state = self._robot_states.get(robot_id)
+        if not state:
+            return
+
+        battery = data.get("battery")
+        if battery is not None:
+            try:
+                state.battery = int(battery)
+            except (TypeError, ValueError):
+                pass
+
+        fresh = data.get("freshWater")
+        if fresh is not None:
+            try:
+                state.fresh_water = float(fresh)
+            except (TypeError, ValueError):
+                pass
+
+        sewage = data.get("sewageWater")
+        if sewage is not None:
+            try:
+                state.sewage_water = float(sewage)
+            except (TypeError, ValueError):
+                pass
+
+        state.work_status = data.get("work_status")
+        have_task = data.get("haveTaskRunning")
+        if have_task is not None:
+            state.have_task_running = bool(have_task)
+
+        # Clear task fields when no task is running
+        if not state.have_task_running and data.get("clean") is None:
+            state.task_id = None
+            state.task_name = None
+            state.task_percentage = None
+            state.task_status_code = None
+            state.task_start_ts = None
 
     def _mark_all_disconnected(self) -> None:
         for state in self._robot_states.values():

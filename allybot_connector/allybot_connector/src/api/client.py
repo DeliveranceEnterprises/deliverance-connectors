@@ -4,6 +4,7 @@
 
 """REST client for the Ally Fleet Robot API with dual-auth support."""
 
+import asyncio
 import base64
 import logging
 
@@ -215,3 +216,115 @@ class AllybotAPIClient:
         except Exception as exc:
             logger.warning("fetch_map_image(%s) failed: %s", image_url, exc)
             return None
+
+    # ------------------------------------------------------------------
+    # Task control endpoints (mobile auth)
+    # ------------------------------------------------------------------
+
+    async def list_tasks(self, device_id: str) -> list[dict]:
+        """POST /fleetapi/clean/list — returns available cleaning tasks for a robot."""
+        try:
+            data = await self._post(
+                "/fleetapi/clean/list",
+                headers=self._mobile_headers(),
+                data={
+                    "id": device_id,
+                    "page": 1,
+                    "pageSize": 20,
+                    "type": 0,
+                    "openid": self.openid,
+                    "token": self.mobile_token,
+                },
+            )
+            if isinstance(data, list):
+                return data
+            return []
+        except Exception as exc:
+            logger.warning("list_tasks(%s) failed: %s", device_id, exc)
+            return []
+
+    async def _check_task_reachable(self, device_id: str, task_id: str) -> None:
+        """GET /fleetapi/task/plan/reachable — triggers server-side path planning.
+
+        The mobile app always calls this before clean/default/start.  Skipping it
+        causes the server to return error 1149 ("Failed to start from the charging
+        pile").  The endpoint always returns code 200; the message field carries
+        any human-readable warning (e.g. map mismatch) which we log.
+        """
+        try:
+            resp = await self._http.get(
+                "/fleetapi/task/plan/reachable",
+                headers=self._mobile_headers(),
+                params={"robotId": device_id, "taskId": task_id, "planId": ""},
+            )
+            resp.raise_for_status()
+            body = resp.json()
+            msg = body.get("message", "")
+            if msg.lower() != "success":
+                logger.warning("Task reachability check: %s", msg)
+        except Exception as exc:
+            logger.warning("check_task_reachable failed (proceeding anyway): %s", exc)
+
+    async def get_device_status(self, device_id: str) -> dict | None:
+        """POST /fleetapi/device/usestatus — snapshot of robot state including location flag."""
+        try:
+            return await self._post(
+                "/fleetapi/device/usestatus",
+                headers=self._mobile_headers(),
+                data={
+                    "openid": self.openid,
+                    "token": self.mobile_token,
+                    "id": device_id,
+                },
+            )
+        except Exception as exc:
+            logger.warning("get_device_status(%s) failed: %s", device_id, exc)
+            return None
+
+    async def start_task(
+        self,
+        device_id: str,
+        task_id: str,
+        reach_charge_point: bool = True,
+    ) -> None:
+        """POST /fleetapi/clean/default/start — dispatches a cleaning task to the robot.
+
+        Raises ValueError if the API rejects the task.
+        """
+        await self._check_task_reachable(device_id, task_id)
+        # The mobile app waits ~2 s after the reachability check before dispatching —
+        # the server needs this time to pre-compute the path plan.
+        await asyncio.sleep(2.0)
+
+        resp = await self._http.post(
+            "/fleetapi/clean/default/start",
+            headers=self._mobile_headers(),
+            data={
+                "id": device_id,
+                "taskId": task_id,
+                "reachChargePoint": str(reach_charge_point).lower(),
+                "openid": self.openid,
+                "token": self.mobile_token,
+            },
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        # Success: data is boolean True.  Failure: data is an integer error code
+        # (e.g. 1146 = not localized, 1149 = path planning failed) even when code=200.
+        data = body.get("data")
+        if data is not True:
+            msg = body.get("message", "unknown error")
+            raise ValueError(f"Task start rejected by robot: {msg} (data={data})")
+
+    async def task_action(self, device_id: str, action_type: int) -> None:
+        """POST /fleetapi/device/taskaction — pause(1) / resume(0) / stop(2) a running task."""
+        await self._post(
+            "/fleetapi/device/taskaction",
+            headers=self._mobile_headers(),
+            params={
+                "openid": self.openid,
+                "token": self.mobile_token,
+                "id": device_id,
+                "type": action_type,
+            },
+        )

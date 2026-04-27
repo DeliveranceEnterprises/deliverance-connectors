@@ -24,6 +24,14 @@ def quaternion_to_yaw(qx: float, qy: float, qz: float, qw: float) -> float:
     return 2.0 * math.atan2(qz, qw)
 
 
+# Task status codes from devicestasktatus WS messages
+TASK_STATUS_MAP: dict[int, str] = {
+    3: "Starting",
+    5: "Running",
+    9: "Paused",
+}
+
+
 @dataclass
 class AllybotRobotState:
     """Cached state for a single Allybot robot, updated by the App WS and REST polling."""
@@ -45,6 +53,20 @@ class AllybotRobotState:
     # Robot metadata (from GET /robot/singleRobotInfo — REST auth)
     robot_name: str | None = None
     alive_status: int | None = None  # 0=offline, 1=online, 2=mobile_connected
+
+    # Task progress (from App WS devicestasktatus)
+    task_id: str | None = None
+    task_name: str | None = None
+    task_percentage: float | None = None  # 0-100
+    task_status_code: int | None = None  # 3=Starting, 5=Running, 9=Paused
+    task_start_ts: int | None = None  # epoch ms
+
+    # Device status (from App WS devicestatus)
+    battery: int | None = None  # 0-100
+    fresh_water: float | None = None  # %
+    sewage_water: float | None = None  # %
+    work_status: str | None = None  # "Charging" / "Idle" / "Operating"
+    have_task_running: bool | None = None
 
     # Connectivity health
     ws_connected: bool = False

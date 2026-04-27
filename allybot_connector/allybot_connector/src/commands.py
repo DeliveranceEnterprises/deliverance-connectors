@@ -2,11 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Custom command definitions for the Allybot connector.
-
-The Ally Fleet Robot API does not expose control endpoints, so this connector
-is monitoring-only.  This module is retained for future use.
-"""
+"""Custom command definitions for the Allybot connector."""
 
 from enum import StrEnum
 
@@ -14,4 +10,12 @@ from inorbit_connector.commands import CommandModel, ExcludeUnsetMixin  # noqa: 
 
 
 class CustomScripts(StrEnum):
-    """Script names for custom commands — currently empty (monitoring-only)."""
+    START_TASK = "start_task"
+    PAUSE_TASK = "pause_task"
+    RESUME_TASK = "resume_task"
+    STOP_TASK = "stop_task"
+
+
+class StartTaskCommand(CommandModel):
+    task_id: str
+    reach_charge_point: bool = True

@@ -9,7 +9,7 @@ apiVersion: v0.1
 kind: StatusDefinition
 metadata:
   id: allybot-ws-connected
-  scope: tag/[ACCOUNT_ID]/[TAG_ID]
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   rules:
     - function: EQUALS

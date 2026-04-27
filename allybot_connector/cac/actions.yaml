@@ -2,6 +2,86 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ActionDefinition objects expose custom commands in the InOrbit UI.
-# The Ally Fleet Robot API does not expose control endpoints.
-# This connector is monitoring-only — no actions are defined.
+# ActionDefinition objects — Allybot Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Allybot (StdZGa32GmBLReFr)
+#
+# Cleaning area actions: one action per named area, task_id baked in.
+# Add more areas by duplicating the allybot-clean-* pattern below.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: allybot-clean-espaitec
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: "Clean: Espaitec"
+  group: Cleaning
+  description: Start the Espaitec cleaning task. Robot returns to dock when done.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: start_task
+    - name: task_id
+      type: string
+      value: "ae3178a170b0f97b40e783e7f9dad747"
+    - name: reach_charge_point
+      type: string
+      value: "true"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: allybot-pause-task
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: Pause Task
+  group: Cleaning
+  description: Pause the currently running cleaning task.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: pause_task
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: allybot-resume-task
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: Resume Task
+  group: Cleaning
+  description: Resume a paused cleaning task.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: resume_task
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: allybot-stop-task
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: Stop Task
+  group: Cleaning
+  description: Cancel the currently running cleaning task.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: stop_task
