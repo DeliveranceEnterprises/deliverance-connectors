@@ -99,6 +99,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "httpx" },
     { name = "inorbit-connector", extra = ["system-stats"] },
+    { name = "pydantic-settings" },
     { name = "tenacity" },
 ]
 
@@ -123,6 +124,7 @@ requires-dist = [
     { name = "coverage", marker = "extra == 'dev'", specifier = "~=7.11" },
     { name = "httpx", specifier = "~=0.28" },
     { name = "inorbit-connector", extras = ["system-stats"], specifier = "~=2.2.0" },
+    { name = "pydantic-settings", specifier = "~=2.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "~=8.4" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = "~=1.2" },
     { name = "pytest-httpx", marker = "extra == 'dev'", specifier = "~=0.35" },

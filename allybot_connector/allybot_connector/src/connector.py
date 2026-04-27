@@ -58,7 +58,7 @@ class AllybotConnector(FleetConnector):
 
     @property
     def _allybot_cfg(self):
-        return self._config.connector_config
+        return self.config.connector_config
 
     # ------------------------------------------------------------------
     # Lifecycle
