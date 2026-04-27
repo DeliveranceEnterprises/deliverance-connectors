@@ -19,10 +19,6 @@ spec:
   attributes:
     mission_tracking:
       type: missionApi
-  execution:
-    modes:
-      start: VLivdzZSG-Mr7hrJ  # Mission
-      end: tV3XEvE2zzfnVf8z    # Idle
   stateDefinitions:
     Executing:
       defaultStatus: OK

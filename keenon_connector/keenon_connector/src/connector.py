@@ -223,13 +223,21 @@ class KeenonConnector(FleetConnector):
 
         InOrbit reads this value (via the account-level mission_status
         DataSourceDefinition) to display the current mode in the Modes widget.
+
+        The Keenon robot permanently sits on its charging dock when not on a
+        task, so chargeStatus is always 1 when idle.  canBeCalled is the
+        correct indicator of availability:
+          - canBeCalled=True  → robot is at dock and available → Idle
+          - canBeCalled=False + chargeStatus=1 → at dock but unavailable → Charging
+          - active task → Mission / Error
         """
         if not state.api_connected:
             return "Error"
-        if state.charge_status == 1:
-            return "Charging"
         if state.task_no and state.task_status is not None:
             return self._MODE_FROM_TASK_STATUS.get(state.task_status, "Mission")
+        # At dock: available = Idle, unavailable = Charging
+        if state.charge_status == 1 and state.can_be_called is False:
+            return "Charging"
         return "Idle"
 
     # Keenon task_status (int) → InOrbit mission state string
