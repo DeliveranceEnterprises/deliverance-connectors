@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # MissionTracking — Keenon Connector
-# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
 # Cloud API mode: connector publishes mission_tracking key-values directly.
 # No edge execution — Keenon manages task dispatch on its own.
 
@@ -11,7 +11,7 @@ apiVersion: v0.1
 kind: MissionTracking
 metadata:
   id: all
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   processingType:
     - api

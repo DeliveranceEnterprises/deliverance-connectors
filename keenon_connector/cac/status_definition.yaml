@@ -9,7 +9,7 @@ apiVersion: v0.1
 kind: StatusDefinition
 metadata:
   id: keenon-battery
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   rules:
     - function: BELOW
@@ -25,7 +25,7 @@ apiVersion: v0.1
 kind: StatusDefinition
 metadata:
   id: keenon-api-connected
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   rules:
     - function: EQUALS

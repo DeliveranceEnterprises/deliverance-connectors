@@ -4,7 +4,7 @@
 
 # DataSourceDefinition objects configure how published key-values appear in
 # InOrbit dashboards and timelines.
-# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
 
 # mission_status is published directly by the connector as a raw key-value
 # ("Idle", "Mission", "Charging", "Error") and picked up by the account-level
@@ -15,7 +15,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-battery
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Battery
   unit: "%"
@@ -30,7 +30,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-online-status
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Online
   source:
@@ -43,7 +43,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-charge-status
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Charge Status
   source:
@@ -55,7 +55,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-can-be-called
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Available
   source:
@@ -68,7 +68,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-robot-state
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Robot State
   source:
@@ -80,7 +80,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-current-scene
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Current Scene
   source:
@@ -92,7 +92,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-task-no
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Task Number
   source:
@@ -104,7 +104,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-task-status
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Task Status
   source:
@@ -116,7 +116,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-robot-model
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Robot Model
   source:
@@ -128,7 +128,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-app-version
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: App Version
   source:
@@ -140,7 +140,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-online-type
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Network Type
   source:
@@ -152,7 +152,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-elevator-status
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: In Elevator
   source:
@@ -165,7 +165,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-api-connected
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: API Connected
   source:
@@ -178,7 +178,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-connector-version
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Connector Version
   source:
@@ -191,7 +191,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-main-state
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Clean Main State
   source:
@@ -203,7 +203,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-sub-state
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Clean Sub State
   source:
@@ -215,7 +215,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-faulting
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Fault
   source:
@@ -228,7 +228,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-emergency-stop
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Emergency Stop
   source:
@@ -241,7 +241,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-bilge-tank
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Waste Tank
   source:
@@ -253,7 +253,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: keenon-clean-water-tank
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   label: Water Tank
   source:

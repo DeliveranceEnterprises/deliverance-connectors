@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: MIT
 
 # ActionDefinition objects — Keenon Connector
-# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: RS EU (hSTlpyR8qtgjSfcT)
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
 # Scene: Espaitec (x4JmTv)
 
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-send-to-mesa-1
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: "Send to Mesa 1"
@@ -37,7 +37,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-send-to-mesa-2
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: "Send to Mesa 2"
@@ -64,7 +64,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-send-to-mesa-3
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: "Send to Mesa 3"
@@ -91,7 +91,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-return-to-origin
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Return to Origin
@@ -109,7 +109,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-cancel-task
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Cancel Task
@@ -132,7 +132,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-recharge
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Return to Charger
@@ -150,7 +150,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-finish
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Finish Cleaning
@@ -168,7 +168,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-pause
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Pause Cleaning
@@ -186,7 +186,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-clean-temporary-task
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Start Temporary Clean
@@ -226,7 +226,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-open-cabin
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Open Cabin
@@ -249,7 +249,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: keenon-close-cabin
-  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
   label: Close Cabin
