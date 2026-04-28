@@ -1,0 +1,163 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# DataSourceDefinition objects configure how key-values appear in InOrbit.
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Autoxing (8gMbOLofiZYK0uKx)
+
+# Battery vitals widget override — same pattern as Keenon.
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: xlXPmDo3Z3GMwSTM
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Battery
+  unit: "%"
+  scale: 100
+  source:
+    keyValue:
+      key: battery
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-battery
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Battery
+  unit: "%"
+  scale: 100
+  source:
+    keyValue:
+      key: battery
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-online-status
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-is-charging
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Charging
+  source:
+    keyValue:
+      key: is_charging
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-is-emergency-stop
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Emergency Stop
+  source:
+    keyValue:
+      key: is_emergency_stop
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-loc-quality
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Localization Quality
+  source:
+    keyValue:
+      key: loc_quality
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-has-obstruction
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Obstacle Detected
+  source:
+    keyValue:
+      key: has_obstruction
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-is-manual-mode
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Manual Mode
+  source:
+    keyValue:
+      key: is_manual_mode
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-current-area
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Current Area
+  source:
+    keyValue:
+      key: current_area_name
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-task-id
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Task ID
+  source:
+    keyValue:
+      key: task_id
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-connector-version
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Connector Version
+  source:
+    keyValue:
+      key: connector_version
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: mission_status
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Mission Status
+  source:
+    keyValue:
+      key: mission_status
+  timeline: {}

@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects — Autoxing Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Autoxing (8gMbOLofiZYK0uKx)
+# Area: 68557cba05b448a565140d9a
+#
+# Navigation actions: one per named POI, poi_id baked in.
+# To add more POIs, duplicate a navigate_to_poi block and update id, label, and poi_id value.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: autoxing-go-to-a
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  type: RunScript
+  label: "Go to A"
+  group: Navigation
+  description: Send the robot to POI A.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: navigate_to_poi
+    - name: poi_id
+      type: string
+      value: "68557eb09525f4651748ab57"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: autoxing-go-to-b
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  type: RunScript
+  label: "Go to B"
+  group: Navigation
+  description: Send the robot to POI B.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: navigate_to_poi
+    - name: poi_id
+      type: string
+      value: "68557ecbf01befc5939c9c7a"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: autoxing-go-to-home
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  type: RunScript
+  label: "Go to Home"
+  group: Navigation
+  description: Send the robot to the Home standby point.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: navigate_to_poi
+    - name: poi_id
+      type: string
+      value: "68557eef81aa926ddd717220"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: autoxing-go-home
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  type: RunScript
+  label: Return to Charger
+  group: Navigation
+  description: Send the robot back to its charging pile.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_home
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: autoxing-cancel-task
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  type: RunScript
+  label: Cancel Task
+  group: Navigation
+  description: Cancel the currently running task.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: cancel_task

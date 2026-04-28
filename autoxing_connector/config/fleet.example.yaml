@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: autoxing
+update_freq: 1.0
+
+account_id: <your_inorbit_account_id>
+
+connector_config:
+  base_url: https://apiglobal.autoxing.com
+  login_name: user@example.com
+  business_id: <business_id_from_ticket_exchange>
+  # password loaded from config/.env (INORBIT_AUTOXING_PASSWORD)
+
+fleet:
+  - robot_id: autoxing-robot-1
+    fleet_robot_id: "<autoxing_robot_id>"
+    # Optional per-area map metadata — the API does not provide origin/resolution.
+    # Add an entry for each areaId the robot operates in.
+    area_map_config:
+      "<area_id>":
+        origin_x: -50.0
+        origin_y: -50.0
+        resolution: 0.05   # metres per pixel

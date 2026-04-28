@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 InOrbit, Inc.
+#
+# SPDX-License-Identifier: MIT
+
+# StatusDefinition objects configure threshold-based robot status rules shown in Fleet Status.
+# After applying, go to Settings > Robot Data and enable "Display in Fleet Status" for each.
+# Scope: use `tag/<ACCOUNT_ID>/<TAG_ID>` to target a robot group.
+
+# TODO: Add one StatusDefinition per key-value that has meaningful thresholds. Example:
+# kind: StatusDefinition
+# apiVersion: v0.1
+# metadata:
+#   id: battery
+#   # scope: tag/<ACCOUNT_ID>/<TAG_ID>
+# spec:
+#   rules:
+#     - function: BELOW
+#       params:
+#         - 0.1    # battery is published as 0-1 float
+#       status: ERROR
+#     - function: BELOW
+#       params:
+#         - 0.2
+#       status: WARNING
