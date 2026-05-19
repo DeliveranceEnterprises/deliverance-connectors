@@ -1,0 +1,18 @@
+[project]
+name = "robot-diagnostics"
+version = "0.1.0"
+description = "Read-only diagnostics and inventory for Deliverance InOrbit connectors"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp~=3.11",
+    "httpx~=0.28",
+    "PyYAML~=6.0",
+]
+
+[project.scripts]
+robot-diagnostics = "robot_diagnostics.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
