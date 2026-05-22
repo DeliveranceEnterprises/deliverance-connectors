@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# DataSourceDefinition objects for the TurtleBot demo connector.
+# Replace all placeholder scopes with your account/tag before applying.
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-battery
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  label: Battery
+  unit: "%"
+  scale: 100
+  source:
+    keyValue:
+      key: battery
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-online-status
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-operational-state
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  label: Operational State
+  source:
+    keyValue:
+      key: operational_state
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-current-waypoint
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  label: Current Waypoint
+  source:
+    keyValue:
+      key: current_waypoint
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: mission_status
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  label: Mission Status
+  source:
+    keyValue:
+      key: mission_status
+  timeline: {}

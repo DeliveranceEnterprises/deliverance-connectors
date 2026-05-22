@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Minimal StatusDefinition example for the TurtleBot demo connector.
+# Replace the placeholder scope with your account/tag before applying.
+
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: turtlebot-low-battery
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  rules:
+    - function: BELOW
+      params:
+        - 0.15
+      status: ERROR
+    - function: BELOW
+      params:
+        - 0.30
+      status: WARNING

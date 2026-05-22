@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects for the TurtleBot demo connector.
+# Replace all placeholder scopes with your account/tag before applying.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-home
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Home
+  group: TurtleBot Demo
+  description: Send the fake TurtleBot to the home waypoint.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: home
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-station-1
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Station 1
+  group: TurtleBot Demo
+  description: Send the fake TurtleBot to station_1.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: station_1
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-station-2
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Station 2
+  group: TurtleBot Demo
+  description: Send the fake TurtleBot to station_2.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: station_2
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-cancel-task
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  type: RunScript
+  label: Cancel Task
+  group: TurtleBot Demo
+  description: Cancel the active fake TurtleBot navigation task.
+  widgets: ["navigation"]
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: cancel_task

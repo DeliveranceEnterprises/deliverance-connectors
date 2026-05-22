@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Optional RobotFootprint-style CAC placeholder.
+# Replace the placeholder scope and validate against the target InOrbit account before applying.
+
+apiVersion: v0.1
+kind: RobotFootprint
+metadata:
+  id: turtlebot-demo-footprint
+  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+spec:
+  radius: 0.18

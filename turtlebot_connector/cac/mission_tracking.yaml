@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# The connector publishes mission_tracking as a key-value following the same
+# mission report shape used by the other connectors in this repo.
+# Add account-specific Mission Tracking UI configuration here if needed.

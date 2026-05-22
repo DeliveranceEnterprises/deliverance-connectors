@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# RobotCamera object for the TurtleBot demo connector.
+# Keep metadata.id aligned with connector_config.ros2.camera_id.
+# In the validated demo setup, InOrbit camera wiring ended up using id "0".
+
+apiVersion: v0.1
+kind: RobotCamera
+metadata:
+  id: "0"
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
+spec:
+  label: TurtleBot Camera
+  shortLabel: T
+  rosTopic: /camera/image_raw
+  width: 640
+  height: 480
+  rate: 5
+  outputEncoding: rgb8
+  quality: 35
+  rotation: 0
+  mirror: false
+  enabled: true

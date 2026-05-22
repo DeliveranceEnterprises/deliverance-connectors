@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# TurtleBot demo connector — fleet configuration example.
+# Copy to config/my_fleet.yaml and adjust values for your InOrbit account.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: turtlebot
+update_freq: 1.0
+
+# account_id: your-inorbit-account-id
+
+connector_config:
+  provider_name: fake_turtlebot
+  backend: fake
+  movement_speed_mps: 0.35
+  battery_drain_per_second: 0.0005
+  charge_rate_per_second: 0.002
+  ros2:
+    enabled: false
+    pose_source: odom
+    odom_topic: /odom
+    amcl_pose_topic: /amcl_pose
+    nav2_action_name: /navigate_to_pose
+    cmd_vel_topic: /cmd_vel
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+    use_sim_time: true
+
+fleet:
+  - robot_id: turtlebot-demo-01
+    name: TurtleBot Demo 01
+    online: true
+    initial_battery: 0.92
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+    waypoints:
+      - name: home
+        x: 0.0
+        y: 0.0
+        yaw: 0.0
+      - name: station_1
+        x: 2.0
+        y: 1.0
+        yaw: 1.57
+      - name: station_2
+        x: -1.5
+        y: 2.5
+        yaw: 3.14
+      - name: charger
+        x: -0.5
+        y: -0.5
+        yaw: -1.57

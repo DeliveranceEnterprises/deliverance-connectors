@@ -9,6 +9,7 @@ Main connectors:
 - `allybot_connector/`
 - `keenon_connector/`
 - `autoxing_connector/`
+- `turtlebot_connector/`
 
 The shared read-only diagnostics and inventory tool lives in:
 
@@ -29,6 +30,11 @@ manufacturer API -> connector/diagnostics -> InOrbit
 ```
 
 Do not treat this work as permission to control robots.
+
+The repo also contains a simulated TurtleBot demo connector used for ROS 2 /
+Gazebo / Nav2 validation against InOrbit. That workflow is different from the
+read-only diagnostics tool and should be treated as a contained simulation
+environment, not as permission to affect real robots.
 
 ## 2. Current Branch / Workflow
 
@@ -72,6 +78,16 @@ zone edits
 route edits
 waypoint edits
 ```
+
+Special case: the TurtleBot ROS 2 / Gazebo demo under `turtlebot_connector/`
+operates in a local simulation environment. For that demo only:
+
+- launching Gazebo/Nav2/connector processes is allowed when the user is
+  explicitly working on the demo
+- `inorbit apply` may be used only for clearly scoped demo CAC validation with
+  explicit user approval
+- the same command remains sensitive for real robots, shared maps, production
+  dashboards, or non-demo accounts
 
 Allowed by default:
 
@@ -172,6 +188,12 @@ tools/robot_diagnostics/
 
 Do not mix the CLI environment with connector or diagnostics environments.
 
+For the TurtleBot demo specifically:
+
+- connector runtime is usually inside the ROS 2 / Gazebo container
+- the InOrbit CLI still runs from `~/INORBIT/.venv-inorbit`
+- do not confuse local demo config with production-like connector configs
+
 ## 6. Diagnostics Tool
 
 Location:
@@ -252,6 +274,56 @@ Full flow: not validated
 ### Keenon / AutoXing
 
 Keenon and AutoXing diagnostics are not yet implemented against real provider APIs. Keep them inventory/skeleton-only until credentials, mappings, and read-only endpoints are confirmed.
+
+### TurtleBot Demo Connector
+
+`turtlebot_connector/` is a local demo/simulation connector, not a production
+robot integration. It has two documentation entry points that intentionally
+coexist:
+
+- `turtlebot_connector/README.md`: connector-level overview, config, CAC, fake
+  backend vs `ros2_gazebo`
+- `turtlebot_connector/docker/ros2_gazebo/README.md`: validated step-by-step
+  simulation flow for the ROS 2 / Gazebo / Nav2 demo
+
+Validated demo learnings so far:
+
+- Gazebo/Nav2/container flow is working in the VNC desktop environment
+- validated display settings:
+  - `DISPLAY=:1`
+  - `XAUTHORITY=/home/ubuntu/.Xauthority`
+  - `LIBGL_ALWAYS_SOFTWARE=1`
+- `gzclient` should be launched as user `ubuntu`, not `root`
+- `launch_sim.sh` spawns TurtleBot3 `waffle_pi` at:
+  - `TB3_X_POSE=-2.0`
+  - `TB3_Y_POSE=-0.5`
+- `/camera/image_raw` is validated in RViz and shows live simulated images
+- the connector camera path uses `RobotSession.register_camera()`
+- for the validated InOrbit demo account, camera wiring ended up aligned to:
+  - `camera_id: "0"`
+  - `RobotCamera.metadata.id: "0"`
+  - robot-scoped `RobotCamera` config for the demo robot
+- InOrbit can request the camera stream and the backend receives frames, but the
+  image still does not render in either:
+  - the `navigation` widget
+  - a standalone `cameraWidget`
+- this makes the current camera issue more likely to be in InOrbit-side camera
+  consumption/rendering than in ROS topic publication
+- teleoperation remains unvalidated / open work
+
+Useful evidence already validated for the TurtleBot demo:
+
+- RViz subscribed to `/camera/image_raw` displays camera images
+- `check_ros_graph.sh` confirms `/odom`, `/cmd_vel`, `/camera/image_raw`, and
+  `/navigate_to_pose`
+- InOrbit actions like `Go Station 1` execute successfully
+- connector logs show:
+  - camera registration in InOrbit
+  - camera adapter open
+  - first frame received
+  - hundreds/thousands of frames received before stream close
+- browser console showed InOrbit-side errors during camera rendering attempts,
+  including null/invalid config/data-connection failures
 
 ## 8. Provider Expansion Rules
 

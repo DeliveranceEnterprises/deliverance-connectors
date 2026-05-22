@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+services:
+  turtlebot-connector:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../config/.env
+    command: ["--config", "config/my_fleet.yaml"]
+    volumes:
+      - ../config:/app/config:ro
+    restart: unless-stopped
