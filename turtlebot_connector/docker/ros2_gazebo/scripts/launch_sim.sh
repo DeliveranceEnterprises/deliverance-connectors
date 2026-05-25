@@ -14,7 +14,7 @@ export DISPLAY="${DISPLAY:-:1}"
 export XAUTHORITY="${XAUTHORITY:-/home/ubuntu/.Xauthority}"
 export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
 
-WORLD_FILE="/opt/ros/${ROS_DISTRO:-humble}/share/turtlebot3_gazebo/worlds/turtlebot3_world.world"
+WORLD_FILE="${WORLD_FILE:-/opt/ros/${ROS_DISTRO:-humble}/share/turtlebot3_gazebo/worlds/turtlebot3_world.world}"
 TB3_X_POSE="${TB3_X_POSE:--2.0}"
 TB3_Y_POSE="${TB3_Y_POSE:--0.5}"
 
