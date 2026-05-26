@@ -5,22 +5,6 @@
 # DataSourceDefinition objects configure how key-values appear in InOrbit.
 # Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Autoxing (8gMbOLofiZYK0uKx)
 
-# Battery vitals widget override — same pattern as Keenon.
-apiVersion: v0.1
-kind: DataSourceDefinition
-metadata:
-  id: xlXPmDo3Z3GMwSTM
-  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
-spec:
-  label: Battery
-  unit: "%"
-  scale: 100
-  source:
-    keyValue:
-      key: battery
-  timeline:
-    fieldType: number
----
 apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
