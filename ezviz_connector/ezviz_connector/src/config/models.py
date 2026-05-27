@@ -23,6 +23,8 @@ class EzvizRobotConfig(RobotConfig):
             position in the InOrbit UI.
         pose_x: Static x coordinate (metres) used with default_map. 0 by default.
         pose_y: Static y coordinate (metres) used with default_map. 0 by default.
+        pose_theta: Static yaw (radians) used with default_map. 0 by default.
+            Common values: 0 = facing +x, 1.5708 = +90°, -1.5708 = -90°, 3.1416 = 180°.
     """
 
     fleet_robot_id: str
@@ -30,6 +32,7 @@ class EzvizRobotConfig(RobotConfig):
     default_map: str | None = None
     pose_x: float = 0.0
     pose_y: float = 0.0
+    pose_theta: float = 0.0
 
 
 class EzvizConfig(BaseSettings):

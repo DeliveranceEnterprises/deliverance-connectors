@@ -95,7 +95,7 @@ class EzvizConnector(FleetConnector):
             # publish_robot_pose) to skip the map-fetch loop — the map
             # already exists in InOrbit.
             self._get_robot_session(robot_id).publish_pose(
-                cfg.pose_x, cfg.pose_y, 0.0, frame_id=cfg.default_map
+                cfg.pose_x, cfg.pose_y, cfg.pose_theta, frame_id=cfg.default_map
             )
 
         kv: dict = {

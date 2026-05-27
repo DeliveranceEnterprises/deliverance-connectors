@@ -32,3 +32,20 @@ spec:
     panels:
       camera: true
       teleop: false
+---
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  navigationWidget:
+    actions:
+      - ezviz-cam2-ptz-up
+      - ezviz-cam2-ptz-down
+      - ezviz-cam2-ptz-left
+      - ezviz-cam2-ptz-right
+      - ezviz-cam2-ptz-stop
+    panels:
+      camera: true
+      teleop: false

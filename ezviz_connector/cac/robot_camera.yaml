@@ -48,3 +48,23 @@ spec:
     # Main stream: /Streaming/Channels/101 (2304x1296)
     # Sub stream:  /Streaming/Channels/102 (lower res, less bandwidth)
     source: rtsp://admin:BMPSCX@192.168.3.79:554/Streaming/Channels/102
+---
+apiVersion: v0.1
+kind: RobotCamera
+metadata:
+  id: '0'
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  enabled: true
+  label: cam
+  outputEncoding: rgb8
+  width: 380
+  height: 240
+  quality: 30
+  rate: 1
+  rosTopic: '0'
+  transitive:
+    type: rtsp
+    bitrate: 100
+    # H6C BG4293947 — LAN IP 192.168.3.81, verification code YXDJXF.
+    source: rtsp://admin:YXDJXF@192.168.3.81:554/Streaming/Channels/102
