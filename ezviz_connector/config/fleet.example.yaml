@@ -1,0 +1,39 @@
+# Ezviz Connector — fleet configuration example
+# Copy to config/my_fleet.yaml and fill in your values.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: ezviz
+
+# How often to poll each camera (Hz). 0.2 = every 5 seconds.
+update_freq: 0.2
+
+# account_id: your-inorbit-account-id   # required for CaC scope resolution
+
+connector_config:
+  # Ezviz account email (the one you use in the Ezviz mobile app).
+  # Can also be supplied via INORBIT_EZVIZ_ACCOUNT env var.
+  # account: you@example.com
+
+  # Ezviz account password. Supply via INORBIT_EZVIZ_PASSWORD env var.
+  # password: ...
+
+  # Regional API host. Pick the one matching your account region:
+  #   apiieu.ezvizlife.com   — EU
+  #   apiius.ezvizlife.com   — US
+  #   apirus.ezvizru.com     — Russia
+  #   apisgp.ezvizlife.com   — Singapore / SEA
+  region_url: apiieu.ezvizlife.com
+
+  request_timeout: 30.0
+
+  # Refresh static metadata (firmware, category) on this cadence.
+  metadata_poll_seconds: 60.0
+
+fleet:
+  - robot_id: ezviz-front-door
+    fleet_robot_id: "L45505505"   # ← Ezviz device serial (9 chars)
+    channel: 1
