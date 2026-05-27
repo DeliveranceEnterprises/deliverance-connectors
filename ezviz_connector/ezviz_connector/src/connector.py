@@ -3,8 +3,9 @@
 import logging
 from typing import override
 
-from inorbit_connector.commands import CommandFailure, CommandResultCode
+from inorbit_connector.commands import CommandFailure, CommandResultCode, parse_custom_command_args
 from inorbit_connector.connector import FleetConnector
+from inorbit_edge.commands import COMMAND_NAV_GOAL
 from inorbit_edge.robot import COMMAND_CUSTOM_COMMAND
 
 from ezviz_connector import __version__ as connector_version
@@ -12,6 +13,7 @@ from ezviz_connector import __version__ as connector_version
 from .api.client import EzvizAPIClient
 from .api.data_poller import DataPoller
 from .api.models import CameraState
+from .commands import DEFAULT_PTZ_NUDGE_MS, DEFAULT_PTZ_SPEED, PTZ_DIRECTIONS, CustomScripts
 from .config.models import EzvizConnectorConfig, EzvizRobotConfig
 
 logger = logging.getLogger(__name__)
@@ -124,21 +126,113 @@ class EzvizConnector(FleetConnector):
         self.publish_robot_key_values(robot_id, **kv)
 
     # ------------------------------------------------------------------
-    # Command handling (stubs — full implementation in v0.2)
+    # Command handling
     # ------------------------------------------------------------------
 
     @override
     async def _inorbit_robot_command_handler(
         self, robot_id: str, command_name: str, args: list, options: dict
     ) -> None:
-        if command_name != COMMAND_CUSTOM_COMMAND:
-            return
-        result_fn = options["result_function"]
-        raise CommandFailure(
-            execution_status_details="Commands not yet implemented",
-            stderr="PTZ, snapshot and defence-mode commands ship in v0.2",
+        self._logger.info(
+            "[cmd] received robot_id=%r command_name=%r args=%r",
+            robot_id, command_name, args,
         )
-        result_fn(CommandResultCode.SUCCESS)  # unreachable
+        if self._api_client is None:
+            raise CommandFailure(
+                execution_status_details="API client not connected",
+                stderr="Connector is not yet connected to the Ezviz cloud",
+            )
+
+        serial = self._robot_id_to_serial[robot_id]
+
+        # Click-on-map → pan/tilt toward the click. Works as an alternative
+        # "click to aim" teleop because the SDK doesn't dispatch joystick
+        # velocity messages.
+        if command_name == COMMAND_NAV_GOAL:
+            await self._handle_nav_goal_as_ptz(serial, args)
+            return
+
+        if command_name != COMMAND_CUSTOM_COMMAND:
+            self._logger.info("[cmd] ignoring non-custom command %r", command_name)
+            return
+
+        result_fn = options["result_function"]
+        try:
+            script_name, script_args = parse_custom_command_args(args)
+        except Exception as exc:
+            self._logger.error("[cmd] parse_custom_command_args failed: %s", exc)
+            raise
+        self._logger.info("[cmd] parsed script=%r args=%r", script_name, script_args)
+
+        # Use plain string comparison — match against StrEnum value patterns
+        # has surprising edge cases; explicit `in` is unambiguous.
+        try:
+            if script_name in PTZ_DIRECTIONS:
+                direction = PTZ_DIRECTIONS[script_name]
+                self._logger.info(
+                    "[cmd] PTZ nudge serial=%s direction=%s duration=%dms speed=%d",
+                    serial, direction, DEFAULT_PTZ_NUDGE_MS, DEFAULT_PTZ_SPEED,
+                )
+                await self._api_client.ptz_nudge(
+                    serial, direction,
+                    duration_ms=DEFAULT_PTZ_NUDGE_MS,
+                    speed=DEFAULT_PTZ_SPEED,
+                )
+                self._logger.info("[cmd] PTZ nudge done")
+
+            elif script_name == CustomScripts.PTZ_STOP:
+                self._logger.info("[cmd] PTZ STOP serial=%s", serial)
+                await self._api_client.ptz_control(serial, "UP", "STOP", DEFAULT_PTZ_SPEED)
+
+            else:
+                self._logger.warning("[cmd] unknown script %r", script_name)
+                raise CommandFailure(
+                    execution_status_details=f"Unknown command: {script_name}",
+                    stderr=f"Command '{script_name}' is not supported",
+                )
+        except CommandFailure:
+            raise
+        except Exception as exc:
+            self._logger.exception("[cmd] PTZ call failed")
+            raise CommandFailure(
+                execution_status_details=f"PTZ call failed: {type(exc).__name__}",
+                stderr=str(exc),
+            )
+
+        result_fn(CommandResultCode.SUCCESS)
+        self._logger.info("[cmd] reported SUCCESS")
+
+    async def _handle_nav_goal_as_ptz(self, serial: str, args: list) -> None:
+        """Translate a click-on-map navGoal into a PTZ direction nudge.
+
+        InOrbit dispatches navGoal as ``[{"x": "..", "y": "..", "theta": ".."}]``
+        (strings, from a ``|``-delimited MQTT payload). The click coordinates
+        are interpreted relative to the camera marker; the dominant axis
+        decides whether to pan or tilt.
+        """
+        if not args or not isinstance(args[0], dict):
+            return
+        try:
+            x = float(args[0].get("x", 0))
+            y = float(args[0].get("y", 0))
+        except (TypeError, ValueError):
+            return
+
+        threshold = 0.5  # metres — ignore taps right on the camera
+        if abs(x) < threshold and abs(y) < threshold:
+            return
+
+        if abs(x) >= abs(y):
+            direction = "RIGHT" if x > 0 else "LEFT"
+        else:
+            direction = "UP" if y > 0 else "DOWN"
+
+        self._logger.info("navGoal (%.2f, %.2f) → PTZ %s nudge", x, y, direction)
+        await self._api_client.ptz_nudge(
+            serial, direction,
+            duration_ms=DEFAULT_PTZ_NUDGE_MS,
+            speed=DEFAULT_PTZ_SPEED,
+        )
 
     # ------------------------------------------------------------------
     # Online check — drives the InOrbit "online" indicator

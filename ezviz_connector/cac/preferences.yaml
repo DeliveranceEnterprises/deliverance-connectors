@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Robot-scoped Preferences for ezviz-cam-1.
+# The navigationWidget.actions list controls which buttons appear in the
+# InOrbit navigation panel for this robot. We surface our 5 PTZ actions
+# so operators can pan/tilt the H6C from the dashboard.
+#
+# This overrides the IoT Camera tag's default (iot_camera_preset_1..5).
+
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  navigationWidget:
+    actions:
+      - ezviz-ptz-up
+      - ezviz-ptz-down
+      - ezviz-ptz-left
+      - ezviz-ptz-right
+      - ezviz-ptz-stop
+    # Panels enabled in the navigation widget:
+    #   camera = live video panel
+    #   teleop = joystick widget. KEEP FALSE — when enabled, the joystick
+    #     REPLACES the action buttons in the same widget slot, making them
+    #     unclickable. AND the inorbit-edge SDK (incl. latest) does NOT
+    #     dispatch joystick velocity, so the joystick widget would be inert
+    #     either way. Use action buttons + click-on-map (navGoal) instead.
+    panels:
+      camera: true
+      teleop: false

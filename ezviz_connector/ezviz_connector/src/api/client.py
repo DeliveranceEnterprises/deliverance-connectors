@@ -129,3 +129,31 @@ class EzvizAPIClient:
     async def get_alarminfo(self, serial: str, limit: int = 1) -> dict:
         client = await self._ensure()
         return await asyncio.to_thread(client.get_alarminfo, serial, limit)
+
+    async def ptz_control(
+        self, serial: str, direction: str, action: str, speed: int = 5
+    ) -> object:
+        """Send a PTZ command.
+
+        Args:
+            serial: Ezviz device serial.
+            direction: UP, DOWN, LEFT, RIGHT (case-insensitive — normalised here).
+            action: START or STOP.
+            speed: 1–10. Default 5 — moderate pace.
+        """
+        client = await self._ensure()
+        return await asyncio.to_thread(
+            client.ptz_control,
+            direction.upper(),
+            serial,
+            action.upper(),
+            int(speed),
+        )
+
+    async def ptz_nudge(
+        self, serial: str, direction: str, duration_ms: int = 500, speed: int = 5
+    ) -> None:
+        """Convenience: START → sleep duration_ms → STOP. The UI's preferred shape."""
+        await self.ptz_control(serial, direction, "START", speed)
+        await asyncio.sleep(duration_ms / 1000.0)
+        await self.ptz_control(serial, direction, "STOP", speed)
