@@ -1,24 +1,76 @@
-# SPDX-FileCopyrightText: 2026 InOrbit, Inc.
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
 #
 # SPDX-License-Identifier: MIT
 
-# StatusDefinition objects configure threshold-based robot status rules shown in Fleet Status.
-# After applying, go to Settings > Robot Data and enable "Display in Fleet Status" for each.
-# Scope: use `tag/<ACCOUNT_ID>/<TAG_ID>` to target a robot group.
+# StatusDefinition objects for Autoxing connector.
+# battery publishes 0–1 float → thresholds in 0–1.
+# loc_quality publishes 0–100 int, scale: 0.01 → post-scale 0–1.
+# Boolean fields use EQUALS false → ERROR.
 
-# TODO: Add one StatusDefinition per key-value that has meaningful thresholds. Example:
-# kind: StatusDefinition
-# apiVersion: v0.1
-# metadata:
-#   id: battery
-#   # scope: tag/<ACCOUNT_ID>/<TAG_ID>
-# spec:
-#   rules:
-#     - function: BELOW
-#       params:
-#         - 0.1    # battery is published as 0-1 float
-#       status: ERROR
-#     - function: BELOW
-#       params:
-#         - 0.2
-#       status: WARNING
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: autoxing-battery
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  rules:
+    - function: BELOW
+      params:
+        - 0.15
+      status: ERROR
+    - function: BELOW
+      params:
+        - 0.30
+      status: WARNING
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: autoxing-loc-quality
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  rules:
+    - function: BELOW
+      params:
+        - 0.50
+      status: ERROR
+    - function: BELOW
+      params:
+        - 0.80
+      status: WARNING
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: autoxing-is-emergency-stop
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - true
+      status: ERROR
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: autoxing-has-obstruction
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - true
+      status: WARNING
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: autoxing-api-connected
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - false
+      status: ERROR

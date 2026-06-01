@@ -13,7 +13,6 @@ metadata:
 spec:
   label: Battery
   unit: "%"
-  scale: 100
   source:
     keyValue:
       key: battery
@@ -66,6 +65,8 @@ metadata:
   scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
 spec:
   label: Localization Quality
+  unit: "%"
+  scale: 0.01
   source:
     keyValue:
       key: loc_quality
@@ -144,4 +145,81 @@ spec:
   source:
     keyValue:
       key: mission_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-is-go-home
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Going Home
+  source:
+    keyValue:
+      key: is_go_home
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-is-remote-mode
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Remote Mode
+  source:
+    keyValue:
+      key: is_remote_mode
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-task-is-cancel
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Task Cancelled
+  source:
+    keyValue:
+      key: task_is_cancel
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-task-is-finish
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Task Finished
+  source:
+    keyValue:
+      key: task_is_finish
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-api-connected
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: API Connected
+  source:
+    keyValue:
+      key: api_connected
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: autoxing-errors
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Errors
+  source:
+    keyValue:
+      key: errors
   timeline: {}

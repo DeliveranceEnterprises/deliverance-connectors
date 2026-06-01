@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# IncidentDefinitions for Autoxing. IDs match StatusDefinition IDs.
+
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: autoxing-battery
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Autoxing Low Battery
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: autoxing-loc-quality
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Autoxing Low Localization Quality
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: autoxing-is-emergency-stop
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Autoxing Emergency Stop
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: autoxing-has-obstruction
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Autoxing Obstacle Detected
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: autoxing-api-connected
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  label: Autoxing API Disconnected
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
