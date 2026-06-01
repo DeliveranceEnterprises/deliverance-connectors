@@ -1,0 +1,191 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinitions for ezviz-cam-1 PTZ control.
+# Each action's `filename` matches a CustomScripts enum value in
+# ezviz_connector/src/commands.py — the connector routes it to
+# pyezvizapi.ptz_control() with the appropriate direction.
+#
+# Scope: robot-level so it only applies to ezviz-cam-1.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-ptz-up
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  type: RunScript
+  label: ▲ Tilt Up
+  group: PTZ
+  description: Nudge the camera up.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_up
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-ptz-down
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  type: RunScript
+  label: ▼ Tilt Down
+  group: PTZ
+  description: Nudge the camera down.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_down
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-ptz-left
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  type: RunScript
+  label: ◀ Pan Left
+  group: PTZ
+  description: Nudge the camera left.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_left
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-ptz-right
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  type: RunScript
+  label: ▶ Pan Right
+  group: PTZ
+  description: Nudge the camera right.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_right
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-ptz-stop
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-1
+spec:
+  type: RunScript
+  label: ■ Stop
+  group: PTZ
+  description: Halt any in-progress PTZ movement.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_stop
+---
+# ezviz-cam-2 PTZ actions (mirrors cam-1).
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-cam2-ptz-up
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  type: RunScript
+  label: ▲ Tilt Up
+  group: PTZ
+  description: Nudge the camera up.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_up
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-cam2-ptz-down
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  type: RunScript
+  label: ▼ Tilt Down
+  group: PTZ
+  description: Nudge the camera down.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_down
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-cam2-ptz-left
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  type: RunScript
+  label: ◀ Pan Left
+  group: PTZ
+  description: Nudge the camera left.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_left
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-cam2-ptz-right
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  type: RunScript
+  label: ▶ Pan Right
+  group: PTZ
+  description: Nudge the camera right.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_right
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: ezviz-cam2-ptz-stop
+  scope: robot/rnLasGAxn5CP7bj32/ezviz-cam-2
+spec:
+  type: RunScript
+  label: ■ Stop
+  group: PTZ
+  description: Halt any in-progress PTZ movement.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: ptz_stop
