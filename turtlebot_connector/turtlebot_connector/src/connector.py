@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
+import io
 from types import MethodType
 import time
 from typing_extensions import override
 
 from inorbit_connector.commands import CommandFailure, CommandResultCode, parse_custom_command_args
 from inorbit_connector.connector import FleetConnector
+from inorbit_connector.models import MapConfigTemp
 from inorbit_edge.robot import COMMAND_CUSTOM_COMMAND
 
 from turtlebot_connector import __version__ as connector_version
@@ -133,7 +135,28 @@ class TurtlebotConnector(FleetConnector):
             node_name=f"turtlebot_connector_camera_{robot_id.replace('-', '_')}",
             use_sim_time=ros2_config.use_sim_time,
         )
-        self._get_robot_session(robot_id).register_camera(ros2_config.camera_id, camera)
+        session = self._get_robot_session(robot_id)
+        session.register_camera(ros2_config.camera_id, camera)
+
+        original_publish_camera_frame = session.publish_camera_frame
+        _frame_count = [0]
+
+        def instrumented_publish_camera_frame(camera_id, image, width, height, ts):
+            _frame_count[0] += 1
+            if _frame_count[0] == 1 or _frame_count[0] % 100 == 0:
+                self._logger.info(
+                    "MQTT publish_camera_frame robot='%s' camera_id='%s' w=%d h=%d bytes=%d count=%d",
+                    robot_id,
+                    camera_id,
+                    width,
+                    height,
+                    len(image) if image else 0,
+                    _frame_count[0],
+                )
+            return original_publish_camera_frame(camera_id, image, width, height, ts)
+
+        session.publish_camera_frame = instrumented_publish_camera_frame
+
         self._registered_ros_cameras.add(robot_id)
         self._logger.info(
             "Registered ROS camera '%s' for robot '%s' from topic '%s'",
@@ -207,6 +230,59 @@ class TurtlebotConnector(FleetConnector):
         elif task.end_ts is not None:
             report["endTs"] = task.end_ts
         return report
+
+    @override
+    async def fetch_robot_map(
+        self, robot_id: str, frame_id: str
+    ) -> MapConfigTemp | None:
+        backend = self._backends.get(robot_id)
+        if not isinstance(backend, Ros2GazeboTurtlebotClient):
+            return None
+
+        grid = backend.get_latest_map()
+        if grid is None:
+            self._logger.info("No /map message received yet for robot '%s'", robot_id)
+            return None
+
+        try:
+            from PIL import Image
+
+            info = grid.info
+            width = info.width
+            height = info.height
+            data = grid.data
+
+            # OccupancyGrid: -1=unknown, 0=free, 100=occupied
+            # Greyscale: free=255 (white), occupied=0 (black), unknown=205 (grey)
+            pixels = bytearray(height * width)
+            for i, v in enumerate(data):
+                if v == 0:
+                    pixels[i] = 255
+                elif v == 100:
+                    pixels[i] = 0
+                else:
+                    pixels[i] = 205
+
+            img = Image.frombytes("L", (width, height), bytes(pixels))
+            # ROS origin is bottom-left; PNG origin is top-left
+            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            image_bytes = buf.getvalue()
+
+            origin = info.origin.position
+            return MapConfigTemp(
+                image=image_bytes,
+                map_id=frame_id,
+                map_label="turtlebot_office_map",
+                origin_x=float(origin.x),
+                origin_y=float(origin.y),
+                resolution=float(info.resolution),
+            )
+        except Exception as exc:
+            self._logger.error("Failed to convert /map to PNG for robot '%s': %s", robot_id, exc)
+            return None
 
     @override
     def _is_fleet_robot_online(self, robot_id: str) -> bool:

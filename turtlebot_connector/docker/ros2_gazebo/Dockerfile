@@ -10,7 +10,7 @@ USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=humble
-ENV TURTLEBOT3_MODEL=burger
+ENV TURTLEBOT3_MODEL=waffle_pi
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-turtlebot3 \
     ros-humble-turtlebot3-gazebo \
     ros-humble-turtlebot3-navigation2 \
+    ros-humble-slam-toolbox \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --no-cache-dir uv

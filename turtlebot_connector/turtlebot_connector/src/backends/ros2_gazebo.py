@@ -11,6 +11,7 @@ default fake backend can run on machines without ROS 2 installed.
 from __future__ import annotations
 
 import importlib
+import io
 import math
 import threading
 import time
@@ -124,6 +125,22 @@ class Ros2GazeboTurtlebotClient:
             self._node,
             self._imports["NavigateToPose"],
             self.ros2_config.nav2_action_name,
+        )
+
+        self._latest_map: Any | None = None
+        # slam_toolbox publishes /map with transient-local durability; use a
+        # matching QoS so the subscriber receives the last map even if it
+        # connects after the first publish.
+        _qos = rclpy.qos.QoSProfile(
+            depth=1,
+            durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=rclpy.qos.ReliabilityPolicy.RELIABLE,
+        )
+        self._map_subscription = self._node.create_subscription(
+            self._imports["OccupancyGrid"],
+            "/map",
+            self._map_callback,
+            _qos,
         )
 
     def dispatch_to(self, waypoint: str, task_id: str = "", label: str = "") -> TurtlebotTask:
@@ -266,6 +283,15 @@ class Ros2GazeboTurtlebotClient:
             self.current_task = None
             self.speed = 0.0
 
+    def _map_callback(self, msg: Any) -> None:
+        with self._lock:
+            self._latest_map = msg
+
+    def get_latest_map(self) -> Any | None:
+        """Return the latest OccupancyGrid message received on /map, or None."""
+        with self._lock:
+            return self._latest_map
+
     def _odom_callback(self, msg: Any) -> None:
         pose = msg.pose.pose
         twist = msg.twist.twist
@@ -325,6 +351,7 @@ class Ros2GazeboTurtlebotClient:
             "NavigateToPose": nav2_module.NavigateToPose,
             "GoalStatus": action_msgs_module.GoalStatus,
             "Odometry": nav_msgs_module.Odometry,
+            "OccupancyGrid": nav_msgs_module.OccupancyGrid,
             "PoseWithCovarianceStamped": geometry_msgs_module.PoseWithCovarianceStamped,
             "Parameter": parameter_module.Parameter,
         }

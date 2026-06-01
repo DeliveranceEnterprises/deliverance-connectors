@@ -10,16 +10,16 @@ apiVersion: v0.1
 kind: RobotCamera
 metadata:
   id: "0"
-  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
+  scope: "robot/<ACCOUNT_ID>/<ROBOT_ID>"
 spec:
   label: TurtleBot Camera
   shortLabel: T
-  rosTopic: /camera/image_raw
-  width: 640
-  height: 480
-  rate: 5
+  rosTopic: "0"
+  width: 380
+  height: 240
+  rate: 1
   outputEncoding: rgb8
-  quality: 35
+  quality: 30
   rotation: 0
   mirror: false
   enabled: true
