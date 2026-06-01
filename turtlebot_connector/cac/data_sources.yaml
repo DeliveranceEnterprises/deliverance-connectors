@@ -9,11 +9,10 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: turtlebot-battery
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   label: Battery
   unit: "%"
-  scale: 100
   source:
     keyValue:
       key: battery
@@ -24,7 +23,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: turtlebot-online-status
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   label: Online
   source:
@@ -37,7 +36,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: turtlebot-operational-state
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   label: Operational State
   source:
@@ -49,7 +48,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: turtlebot-current-waypoint
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   label: Current Waypoint
   source:
@@ -61,7 +60,7 @@ apiVersion: v0.1
 kind: DataSourceDefinition
 metadata:
   id: mission_status
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   label: Mission Status
   source:

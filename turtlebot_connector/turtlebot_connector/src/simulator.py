@@ -81,6 +81,39 @@ class FakeTurtlebotSimulator:
         self.operational_state = OperationalState.MOVING
         return task
 
+    def dispatch_to_pose(
+        self, x: float, y: float, yaw: float, task_id: str = "", label: str = ""
+    ) -> TurtlebotTask:
+        """Simulate driving toward a free pose (Waypoint Teleop)."""
+
+        now_ms = int(time.time() * 1000)
+        task = TurtlebotTask(
+            task_id=task_id or f"{self.robot_id}-pose-{now_ms}",
+            label=label or f"Go to ({x:.2f}, {y:.2f})",
+            waypoint="",
+            state=TaskState.EXECUTING,
+            start_ts=now_ms,
+        )
+        self.current_task = task
+        self.last_task = task
+        # Reuse the existing target-distance machinery by pretending a waypoint
+        # named "__teleop__" exists for this run.
+        self.waypoints["__teleop__"] = type(next(iter(self.waypoints.values())))(
+            name="__teleop__", x=float(x), y=float(y), yaw=float(yaw)
+        ) if self.waypoints else None
+        self._target_waypoint = "__teleop__" if self.waypoints.get("__teleop__") else None
+        if self._target_waypoint:
+            self._target_start_distance = max(
+                math.hypot(x - self.pose.x, y - self.pose.y), 0.001
+            )
+        self.operational_state = OperationalState.MOVING
+        return task
+
+    def relocalize(self, x: float, y: float, yaw: float) -> None:
+        """Snap the fake robot to (x, y, yaw)."""
+
+        self.pose = type(self.pose)(x=float(x), y=float(y), yaw=float(yaw))
+
     def cancel_task(self, task_id: str = "") -> TurtlebotTask:
         """Cancel the active simulated task."""
 

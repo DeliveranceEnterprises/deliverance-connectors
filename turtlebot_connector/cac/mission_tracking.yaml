@@ -2,6 +2,31 @@
 #
 # SPDX-License-Identifier: MIT
 
-# The connector publishes mission_tracking as a key-value following the same
-# mission report shape used by the other connectors in this repo.
-# Add account-specific Mission Tracking UI configuration here if needed.
+# MissionTracking — TurtleBot Connector
+# Makes InOrbit's interpretation of the connector's mission_tracking JSON
+# explicit instead of relying on automatic inference. The connector publishes
+# the standard mission_tracking key-value with state values "Executing",
+# "Completed", "Canceled", "Aborted" — mapped here to defaultStatus.
+# Same shape as the Keenon/Allybot/Autoxing connectors in this repo.
+
+apiVersion: v0.1
+kind: MissionTracking
+metadata:
+  id: all
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  processingType:
+    - api
+  autoClosePreviousMission: true
+  attributes:
+    mission_tracking:
+      type: missionApi
+  stateDefinitions:
+    Executing:
+      defaultStatus: OK
+    Completed:
+      defaultStatus: OK
+    Canceled:
+      defaultStatus: error
+    Aborted:
+      defaultStatus: error

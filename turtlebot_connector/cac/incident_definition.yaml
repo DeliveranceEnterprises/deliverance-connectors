@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# IncidentDefinition for TurtleBot low battery.
+# The metadata.id must match the StatusDefinition id (turtlebot-battery)
+# so that InOrbit links the incident to that status implicitly.
+
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: turtlebot-battery
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  label: TurtleBot Low Battery
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []

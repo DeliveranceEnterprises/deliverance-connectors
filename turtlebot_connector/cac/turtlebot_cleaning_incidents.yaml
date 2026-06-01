@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Cleaning-robot demo incidents for the TurtleBot.
+# IDs match the StatusDefinition IDs so InOrbit fires an incident on each
+# WARNING/ERROR transition.
+
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: turtlebot-clean-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: TurtleBot Low Clean Water
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: turtlebot-dirty-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: TurtleBot Dirty Water Tank Full
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: turtlebot-clean-emergency-stop
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: TurtleBot Emergency Stop
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []

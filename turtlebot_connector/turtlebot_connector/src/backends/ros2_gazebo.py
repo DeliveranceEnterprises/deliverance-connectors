@@ -127,6 +127,15 @@ class Ros2GazeboTurtlebotClient:
             self.ros2_config.nav2_action_name,
         )
 
+        # Publisher used for InOrbit "Relocalize" (operator drag-drops the
+        # robot avatar on the map). Mirrors RViz behavior: publishes a
+        # PoseWithCovarianceStamped on /initialpose, which AMCL consumes.
+        self._initialpose_pub = self._node.create_publisher(
+            self._imports["PoseWithCovarianceStamped"],
+            self.ros2_config.initialpose_topic,
+            10,
+        )
+
         self._latest_map: Any | None = None
         # slam_toolbox publishes /map with transient-local durability; use a
         # matching QoS so the subscriber receives the last map even if it
@@ -198,6 +207,59 @@ class Ros2GazeboTurtlebotClient:
 
         return task
 
+    def dispatch_to_pose(
+        self, x: float, y: float, yaw: float, task_id: str = "", label: str = ""
+    ) -> TurtlebotTask:
+        """Send a NavigateToPose goal for a free (x, y, yaw) target."""
+
+        if not self._nav_action_client.wait_for_server(timeout_sec=2.0):
+            self._mark_error()
+            raise RuntimeError(
+                f"Nav2 action server '{self.ros2_config.nav2_action_name}' is not available"
+            )
+
+        now_ms = int(time.time() * 1000)
+        task = TurtlebotTask(
+            task_id=task_id or f"{self.robot_id}-pose-{now_ms}",
+            label=label or f"Go to ({x:.2f}, {y:.2f})",
+            waypoint="",
+            state=TaskState.EXECUTING,
+            start_ts=now_ms,
+        )
+
+        with self._lock:
+            self.current_task = task
+            self.last_task = task
+            self.operational_state = OperationalState.MOVING
+            self.speed = 0.0
+
+        goal_msg = self._build_nav2_goal_from_pose(x, y, yaw)
+        future = self._nav_action_client.send_goal_async(goal_msg)
+        future.add_done_callback(self._goal_response_callback)
+        return task
+
+    def relocalize(self, x: float, y: float, yaw: float) -> None:
+        """Publish a PoseWithCovarianceStamped to /initialpose for AMCL."""
+
+        msg = self._imports["PoseWithCovarianceStamped"]()
+        msg.header.frame_id = self.ros2_config.map_frame
+        msg.header.stamp = self._node.get_clock().now().to_msg()
+        msg.pose.pose.position.x = float(x)
+        msg.pose.pose.position.y = float(y)
+        msg.pose.pose.position.z = 0.0
+        qx, qy, qz, qw = yaw_to_quaternion(float(yaw))
+        msg.pose.pose.orientation.x = qx
+        msg.pose.pose.orientation.y = qy
+        msg.pose.pose.orientation.z = qz
+        msg.pose.pose.orientation.w = qw
+        # Same covariance RViz uses for "2D Pose Estimate"
+        cov = [0.0] * 36
+        cov[0] = 0.25
+        cov[7] = 0.25
+        cov[35] = 0.0685
+        msg.pose.covariance = cov
+        self._initialpose_pub.publish(msg)
+
     def step(self, delta_seconds: float) -> TurtlebotState:
         """Return latest ROS state; ROS callbacks advance asynchronously."""
 
@@ -233,13 +295,16 @@ class Ros2GazeboTurtlebotClient:
 
     def _build_nav2_goal(self, waypoint_name: str) -> Any:
         waypoint = self.waypoints[waypoint_name]
+        return self._build_nav2_goal_from_pose(waypoint.x, waypoint.y, waypoint.yaw)
+
+    def _build_nav2_goal_from_pose(self, x: float, y: float, yaw: float) -> Any:
         goal_msg = self._imports["NavigateToPose"].Goal()
         goal_msg.pose.header.frame_id = self.ros2_config.map_frame
         goal_msg.pose.header.stamp = self._node.get_clock().now().to_msg()
-        goal_msg.pose.pose.position.x = waypoint.x
-        goal_msg.pose.pose.position.y = waypoint.y
+        goal_msg.pose.pose.position.x = float(x)
+        goal_msg.pose.pose.position.y = float(y)
         goal_msg.pose.pose.position.z = 0.0
-        qx, qy, qz, qw = yaw_to_quaternion(waypoint.yaw)
+        qx, qy, qz, qw = yaw_to_quaternion(float(yaw))
         goal_msg.pose.pose.orientation.x = qx
         goal_msg.pose.pose.orientation.y = qy
         goal_msg.pose.pose.orientation.z = qz

@@ -55,6 +55,11 @@ class Ros2GazeboConfig(BaseModel):
     amcl_pose_topic: str = "/amcl_pose"
     nav2_action_name: str = "/navigate_to_pose"
     cmd_vel_topic: str = "/cmd_vel"
+    initialpose_topic: str = "/initialpose"
+    # Open Teleop (d-pad) step sizes. Each click on an arrow nudges the robot
+    # by these increments through Nav2 (relative to the robot frame).
+    open_teleop_linear_step_m: float = 0.35
+    open_teleop_angular_step_rad: float = 0.50
     map_frame: str = "map"
     odom_frame: str = "odom"
     base_frame: str = "base_link"
@@ -65,6 +70,25 @@ class Ros2GazeboConfig(BaseModel):
     camera_rate_hz: float = Field(default=5.0, gt=0.0)
     camera_scaling: float = Field(default=0.5, gt=0.0, le=1.0)
     camera_quality: int = Field(default=35, ge=1, le=100)
+
+
+class CleaningDemoConfig(BaseModel):
+    """Static fake cleaning-robot telemetry for the TurtleBot Cleaning demo.
+
+    Values are published as plain key-values on every cycle when enabled. They
+    do not animate — drain/refill simulation can be layered on top later.
+    """
+
+    enabled: bool = False
+    clean_water_tank: int = Field(default=72, ge=0, le=100)
+    dirty_water_tank: int = Field(default=35, ge=0, le=100)
+    detergent_tank: int = Field(default=58, ge=0, le=100)
+    cleaning_mode: str = "eco"
+    brush_status: str = "running"
+    vacuum_status: str = "on"
+    clean_faulting: bool = False
+    clean_emergency_stop: bool = False
+    cleaned_area_m2: float = 24.5
 
 
 class TurtlebotRobotConfig(RobotConfig):
@@ -109,6 +133,7 @@ class TurtlebotConfig(BaseSettings):
     battery_drain_per_second: float = Field(default=0.0005, ge=0.0)
     charge_rate_per_second: float = Field(default=0.002, ge=0.0)
     ros2: Ros2GazeboConfig = Field(default_factory=Ros2GazeboConfig)
+    cleaning_demo: CleaningDemoConfig = Field(default_factory=CleaningDemoConfig)
 
 
 class TurtlebotConnectorConfig(ConnectorConfig):

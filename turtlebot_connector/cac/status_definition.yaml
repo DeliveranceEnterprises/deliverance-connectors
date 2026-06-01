@@ -8,8 +8,8 @@
 apiVersion: v0.1
 kind: StatusDefinition
 metadata:
-  id: turtlebot-low-battery
-  scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
+  id: turtlebot-battery
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
 spec:
   rules:
     - function: BELOW

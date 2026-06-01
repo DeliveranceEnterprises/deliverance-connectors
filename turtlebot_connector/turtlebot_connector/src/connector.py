@@ -7,14 +7,19 @@
 from __future__ import annotations
 
 import io
-from types import MethodType
+import math
 import time
 from typing_extensions import override
 
 from inorbit_connector.commands import CommandFailure, CommandResultCode, parse_custom_command_args
 from inorbit_connector.connector import FleetConnector
 from inorbit_connector.models import MapConfigTemp
-from inorbit_edge.robot import COMMAND_CUSTOM_COMMAND
+from inorbit_edge.robot import (
+    COMMAND_CUSTOM_COMMAND,
+    COMMAND_INITIAL_POSE,
+    COMMAND_NAV_GOAL,
+)
+from inorbit_edge.inorbit_pb2 import Nav2DPathMessage, Nav2DWaypointFrame
 
 from turtlebot_connector import __version__ as connector_version
 from turtlebot_connector.src.backends.base import (
@@ -44,6 +49,10 @@ class TurtlebotConnector(FleetConnector):
         self._backends: dict[str, TurtlebotBackend] = {}
         self._registered_ros_cameras: set[str] = set()
         self._instrumented_sessions: set[str] = set()
+        # Track the last Open Teleop goal we sent so consecutive clicks
+        # accumulate instead of fighting Nav2 in-flight.
+        # robot_id -> (timestamp_monotonic, x, y, yaw)
+        self._open_teleop_last_goal: dict[str, tuple[float, float, float, float]] = {}
         for robot in config.fleet:
             self._backends[robot.robot_id] = self._build_backend(robot)
         self._last_tick = time.monotonic()
@@ -94,28 +103,220 @@ class TurtlebotConnector(FleetConnector):
             return
 
         session = self._get_robot_session(robot_id)
-        original_handle_in_cmd = getattr(session, "_handle_in_cmd", None)
-        if original_handle_in_cmd is None:
-            return
+        # Subscribe to the InOrbit "Precision Teleop" topic and route it through
+        # our own handler, since the Edge SDK does not expose a callback for it.
+        # Topic shape: r/<robot_id>/ros/nav/goal_path
+        # Payload:     Nav2DPathMessage protobuf — last waypoint is the target,
+        #              expressed in frame=ROBOT (i.e. relative to the robot).
+        nav_topic = session._get_robot_subtopic(subtopic="ros/nav/goal_path")
 
-        def instrumented_handle_in_cmd(session_self, msg):
+        def on_goal_path(client, userdata, msg):
             try:
-                decoded = msg.decode("utf-8")
-            except Exception:
-                decoded = repr(msg)
-            self._logger.info(
-                "RobotSession in_cmd for robot '%s': %s",
-                robot_id,
-                decoded,
-            )
-            return original_handle_in_cmd(msg)
+                self._handle_precision_teleop_path(robot_id, msg.payload)
+            except Exception as exc:
+                self._logger.error(
+                    "Failed to handle precision teleop path for robot '%s': %s",
+                    robot_id,
+                    exc,
+                )
 
-        session._handle_in_cmd = MethodType(instrumented_handle_in_cmd, session)
-        self._instrumented_sessions.add(robot_id)
+        session.client.message_callback_add(nav_topic, on_goal_path)
+        session.client.subscribe(nav_topic)
         self._logger.info(
-            "Installed RobotSession in_cmd instrumentation for robot '%s'",
+            "Subscribed to precision-teleop topic '%s' for robot '%s'",
+            nav_topic,
             robot_id,
         )
+
+        # InOrbit "Open Teleop" d-pad. Payload is "seq|ts|N" where N encodes
+        # the direction:  0 = forward,  2 = backward,  1 = left,  -1 = right.
+        step_topic = session._get_robot_subtopic(subtopic="ros/teleop/step")
+
+        def on_teleop_step(client, userdata, msg):
+            try:
+                self._handle_open_teleop_step(robot_id, msg.payload)
+            except Exception as exc:
+                self._logger.error(
+                    "Failed to handle open teleop step for robot '%s': %s",
+                    robot_id,
+                    exc,
+                )
+
+        session.client.message_callback_add(step_topic, on_teleop_step)
+        session.client.subscribe(step_topic)
+        self._logger.info(
+            "Subscribed to open-teleop topic '%s' for robot '%s'",
+            step_topic,
+            robot_id,
+        )
+
+        self._instrumented_sessions.add(robot_id)
+
+    def _handle_open_teleop_step(self, robot_id: str, payload: bytes) -> None:
+        """Decode an InOrbit Open Teleop d-pad step and forward it as a
+        relative NavigateToPose goal.
+
+        Payload format: "seq|ts|N" where N is:
+            0  forward     2  backward
+            1  left turn  -1  right turn
+        """
+
+        backend = self._backends.get(robot_id)
+        if backend is None:
+            self._logger.warning(
+                "Received open teleop step for unknown robot '%s'", robot_id
+            )
+            return
+
+        try:
+            text = payload.decode("utf-8")
+            parts = text.split("|")
+            direction = int(parts[2])
+        except (UnicodeDecodeError, IndexError, ValueError) as exc:
+            self._logger.error(
+                "Could not parse open teleop step %r for robot '%s': %s",
+                payload,
+                robot_id,
+                exc,
+            )
+            return
+
+        ros2_cfg = self.config.connector_config.ros2
+        linear_step = float(ros2_cfg.open_teleop_linear_step_m)
+        angular_step = float(ros2_cfg.open_teleop_angular_step_rad)
+
+        if direction == 0:
+            dx, dy, dtheta = linear_step, 0.0, 0.0
+            label = "Open Teleop Forward"
+        elif direction == 2:
+            dx, dy, dtheta = -linear_step, 0.0, 0.0
+            label = "Open Teleop Backward"
+        elif direction == 1:
+            dx, dy, dtheta = 0.0, 0.0, angular_step
+            label = "Open Teleop Left"
+        elif direction == -1:
+            dx, dy, dtheta = 0.0, 0.0, -angular_step
+            label = "Open Teleop Right"
+        else:
+            self._logger.warning(
+                "Unknown open teleop direction %d for robot '%s'", direction, robot_id
+            )
+            return
+
+        # Chain consecutive clicks: use the previous goal as base whenever it
+        # is recent OR the robot is still executing a task (Nav2 hasn't
+        # finished the previous goal). This makes rapid taps accumulate
+        # instead of fighting Nav2 in-flight.
+        chain_window_s = 10.0
+        last = self._open_teleop_last_goal.get(robot_id)
+        now = time.monotonic()
+        state = backend.snapshot()
+        still_executing = state.current_task is not None
+        if last is not None and (still_executing or (now - last[0]) < chain_window_s):
+            base_x, base_y, base_yaw = last[1], last[2], last[3]
+        else:
+            base_x, base_y, base_yaw = state.pose.x, state.pose.y, state.pose.yaw
+
+        cos_yaw = math.cos(base_yaw)
+        sin_yaw = math.sin(base_yaw)
+        map_x = base_x + cos_yaw * dx - sin_yaw * dy
+        map_y = base_y + sin_yaw * dx + cos_yaw * dy
+        map_yaw = math.atan2(
+            math.sin(base_yaw + dtheta),
+            math.cos(base_yaw + dtheta),
+        )
+
+        self._open_teleop_last_goal[robot_id] = (now, map_x, map_y, map_yaw)
+
+        self._logger.info(
+            "Open teleop %s for robot '%s' -> map pose=(%.3f, %.3f, %.3f rad)",
+            label,
+            robot_id,
+            map_x,
+            map_y,
+            map_yaw,
+        )
+
+        try:
+            backend.dispatch_to_pose(map_x, map_y, map_yaw, label=label)
+        except RuntimeError as exc:
+            self._logger.error(
+                "Open teleop dispatch failed for robot '%s': %s", robot_id, exc
+            )
+
+    def _handle_precision_teleop_path(self, robot_id: str, payload: bytes) -> None:
+        """Parse a Nav2DPathMessage from InOrbit Precision Teleop and forward
+        the final pose to the backend as a NavigateToPose goal."""
+
+        backend = self._backends.get(robot_id)
+        if backend is None:
+            self._logger.warning(
+                "Received precision teleop path for unknown robot '%s'", robot_id
+            )
+            return
+
+        msg = Nav2DPathMessage()
+        try:
+            msg.ParseFromString(payload)
+        except Exception as exc:
+            self._logger.error(
+                "Could not parse Nav2DPathMessage for robot '%s': %s",
+                robot_id,
+                exc,
+            )
+            return
+
+        if not msg.waypoints:
+            self._logger.info(
+                "Precision teleop path with no waypoints for robot '%s'", robot_id
+            )
+            return
+
+        target = msg.waypoints[-1]
+        dx = float(target.x)
+        dy = float(target.y)
+        dtheta = float(target.theta)
+        frame = target.frame or msg.frame
+
+        if frame == Nav2DWaypointFrame.ROBOT:
+            state = backend.snapshot()
+            cos_yaw = math.cos(state.pose.yaw)
+            sin_yaw = math.sin(state.pose.yaw)
+            map_x = state.pose.x + cos_yaw * dx - sin_yaw * dy
+            map_y = state.pose.y + sin_yaw * dx + cos_yaw * dy
+            map_yaw = state.pose.yaw + dtheta
+        elif frame == Nav2DWaypointFrame.MAP:
+            map_x, map_y, map_yaw = dx, dy, dtheta
+        else:
+            self._logger.warning(
+                "Precision teleop path uses unsupported frame=%s for robot '%s'",
+                frame,
+                robot_id,
+            )
+            return
+
+        # Normalize yaw to (-pi, pi]
+        map_yaw = math.atan2(math.sin(map_yaw), math.cos(map_yaw))
+
+        self._logger.info(
+            "Precision teleop for robot '%s': delta=(%.3f, %.3f, %.3f rad) frame=%s "
+            "-> map pose=(%.3f, %.3f, %.3f rad)",
+            robot_id,
+            dx,
+            dy,
+            dtheta,
+            frame,
+            map_x,
+            map_y,
+            map_yaw,
+        )
+
+        try:
+            backend.dispatch_to_pose(map_x, map_y, map_yaw, label="Precision Teleop")
+        except RuntimeError as exc:
+            self._logger.error(
+                "Precision teleop dispatch failed for robot '%s': %s", robot_id, exc
+            )
 
     def _register_ros_camera_if_needed(self, robot_id: str) -> None:
         ros2_config = self.config.connector_config.ros2
@@ -196,6 +397,18 @@ class TurtlebotConnector(FleetConnector):
             kv["task_completed_percent"] = task.completed_percent
             kv["mission_tracking"] = self._build_mission_report(task)
 
+        cleaning = self.config.connector_config.cleaning_demo
+        if cleaning.enabled:
+            kv["clean_water_tank"] = cleaning.clean_water_tank
+            kv["dirty_water_tank"] = cleaning.dirty_water_tank
+            kv["detergent_tank"] = cleaning.detergent_tank
+            kv["cleaning_mode"] = cleaning.cleaning_mode
+            kv["brush_status"] = cleaning.brush_status
+            kv["vacuum_status"] = cleaning.vacuum_status
+            kv["clean_faulting"] = cleaning.clean_faulting
+            kv["clean_emergency_stop"] = cleaning.clean_emergency_stop
+            kv["cleaned_area_m2"] = cleaning.cleaned_area_m2
+
         self.publish_robot_key_values(robot_id, **kv)
 
     def _compute_mission_status(self, state: TurtlebotState) -> str:
@@ -213,6 +426,7 @@ class TurtlebotConnector(FleetConnector):
             TaskState.EXECUTING: "Executing",
             TaskState.COMPLETED: "Completed",
             TaskState.CANCELED: "Canceled",
+            TaskState.ERROR: "Aborted",
         }[task.state]
         report: dict = {
             "missionId": task.task_id,
@@ -293,9 +507,6 @@ class TurtlebotConnector(FleetConnector):
     async def _inorbit_robot_command_handler(
         self, robot_id: str, command_name: str, args: list, options: dict
     ) -> None:
-        if command_name != COMMAND_CUSTOM_COMMAND:
-            return
-
         backend = self._backends.get(robot_id)
         if backend is None:
             raise CommandFailure(
@@ -304,6 +515,59 @@ class TurtlebotConnector(FleetConnector):
             )
 
         result_fn = options["result_function"]
+
+        # InOrbit "Waypoint Teleop" — operator drops a pin on the map. The SDK
+        # passes args = [{"x": "...", "y": "...", "theta": "..."}].
+        if command_name == COMMAND_NAV_GOAL:
+            self._logger.info("Received navGoal for robot '%s': %s", robot_id, args)
+            try:
+                pose = args[0]
+                x = float(pose["x"])
+                y = float(pose["y"])
+                yaw = float(pose["theta"])
+                backend.dispatch_to_pose(x, y, yaw, label="Waypoint Teleop")
+            except (KeyError, ValueError, TypeError, IndexError) as exc:
+                raise CommandFailure(
+                    execution_status_details=f"Bad navGoal payload: {exc}",
+                    stderr=str(exc),
+                ) from exc
+            except RuntimeError as exc:
+                raise CommandFailure(
+                    execution_status_details=str(exc),
+                    stderr=str(exc),
+                ) from exc
+            result_fn(CommandResultCode.SUCCESS)
+            return
+
+        # InOrbit "Relocalize" — operator drags the avatar on the map. Same
+        # payload shape as navGoal.
+        if command_name == COMMAND_INITIAL_POSE:
+            self._logger.info("Received initialPose for robot '%s': %s", robot_id, args)
+            try:
+                pose = args[0]
+                x = float(pose["x"])
+                y = float(pose["y"])
+                yaw = float(pose["theta"])
+                backend.relocalize(x, y, yaw)
+            except (KeyError, ValueError, TypeError, IndexError) as exc:
+                raise CommandFailure(
+                    execution_status_details=f"Bad initialPose payload: {exc}",
+                    stderr=str(exc),
+                ) from exc
+            result_fn(CommandResultCode.SUCCESS)
+            return
+
+        if command_name != COMMAND_CUSTOM_COMMAND:
+            # Log unhandled command names so we can confirm whether the
+            # InOrbit "Open Teleop" d-pad reaches us at all.
+            self._logger.info(
+                "Unhandled InOrbit command for robot '%s': name=%s args=%s",
+                robot_id,
+                command_name,
+                args,
+            )
+            return
+
         script_name, script_args = parse_custom_command_args(args)
 
         try:

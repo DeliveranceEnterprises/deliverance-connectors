@@ -303,27 +303,22 @@ Validated demo learnings so far:
   - `camera_id: "0"`
   - `RobotCamera.metadata.id: "0"`
   - robot-scoped `RobotCamera` config for the demo robot
-- InOrbit can request the camera stream and the backend receives frames, but the
-  image still does not render in either:
-  - the `navigation` widget
-  - a standalone `cameraWidget`
-- this makes the current camera issue more likely to be in InOrbit-side camera
-  consumption/rendering than in ROS topic publication
+- camera is fully working in InOrbit Navigation widget
+- map is fully working — scanned with slam_toolbox, uploaded via fetch_robot_map()
+- actions scoped correctly to robot/rnLasGAxn5CP7bj32/turtlebot-demo-01
 - teleoperation remains unvalidated / open work
 
-Useful evidence already validated for the TurtleBot demo:
+Key lessons learned (see also turtlebot_connector/CLAUDE.md):
 
-- RViz subscribed to `/camera/image_raw` displays camera images
-- `check_ros_graph.sh` confirms `/odom`, `/cmd_vel`, `/camera/image_raw`, and
-  `/navigate_to_pose`
-- InOrbit actions like `Go Station 1` execute successfully
-- connector logs show:
-  - camera registration in InOrbit
-  - camera adapter open
-  - first frame received
-  - hundreds/thousands of frames received before stream close
-- browser console showed InOrbit-side errors during camera rendering attempts,
-  including null/invalid config/data-connection failures
+- CRITICAL: for Edge SDK connectors, `RobotCamera.spec.rosTopic` must be the
+  camera_id (e.g. `"0"`), NOT the ROS topic name. For native ROS2 agents
+  (4.x.x.ros2) it should be the actual ROS topic.
+- map fetch requires Nav2 running and publishing /map before connector starts;
+  use launch_nav2.sh with office_scanned.yaml, not launch_slam.sh
+- scanned map saved at office_demo/maps/office_scanned.yaml — do not use
+  office_map.yaml which is a pixel-converted PDF without real scan data
+- camera settings matching other robots in account: width 380, height 240,
+  rate 1, quality 30, outputEncoding rgb8
 
 ## 8. Provider Expansion Rules
 

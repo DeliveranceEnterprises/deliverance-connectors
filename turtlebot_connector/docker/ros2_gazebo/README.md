@@ -15,7 +15,7 @@ This folder prepares a single-container validation environment for:
 
 - ROS 2 Humble
 - Gazebo classic
-- TurtleBot3
+- TurtleBot3 waffle_pi (camera + LiDAR)
 - Nav2
 - `turtlebot_connector` with `backend=ros2_gazebo`
 
@@ -58,19 +58,19 @@ docker compose -f docker/ros2_gazebo/docker-compose.yml exec turtlebot-ros2-gaze
 
 ## Prepare Connector Config
 
-Inside or outside the container:
+The validated fleet config is already at:
 
-```bash
-cp config/fleet.ros2.example.yaml config/fleet.ros2.local.yaml
+```text
+config/fleet.ros2.office.local.yaml
 ```
 
-Adjust waypoints only after checking the TurtleBot3 map. Keep them close to
-free space for the first run.
+Do not use `fleet.ros2.local.yaml` — that file uses the generic Nav2 default
+map and does not configure camera or the office world correctly.
 
 ## Validated Step-By-Step Flow
 
-The sequence below reflects the flow that was actually used in the successful
-validation sessions.
+The sequence below reflects the flow that was actually validated end-to-end,
+including camera and map upload to InOrbit.
 
 ### 1. Start the container from the host
 
@@ -93,10 +93,8 @@ http://localhost:6080
 Inside the container:
 
 ```bash
-export DISPLAY=:1
-export XAUTHORITY=/home/ubuntu/.Xauthority
-export LIBGL_ALWAYS_SOFTWARE=1
-docker/ros2_gazebo/scripts/launch_sim.sh
+WORLD_FILE=/workspace/turtlebot_connector/office_demo/worlds/office_world.world \
+  /workspace/turtlebot_connector/docker/ros2_gazebo/scripts/launch_sim.sh
 ```
 
 This launches `gzserver` with `GazeboRosFactory`, then starts
@@ -129,57 +127,42 @@ gzclient
 This step is useful for visual confirmation. The simulation itself can still run
 without `gzclient`.
 
-### 5. Terminal 3 inside the container: launch Nav2 / RViz
+### 5. Terminal 3 inside the container: launch Nav2 with the scanned office map
 
 Inside the container:
 
 ```bash
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/launch_nav2.sh
+/workspace/turtlebot_connector/docker/ros2_gazebo/scripts/launch_nav2.sh \
+  /workspace/turtlebot_connector/office_demo/maps/office_scanned.yaml
 ```
 
-Default map:
+Always use `office_scanned.yaml` — this is the SLAM-scanned map of the Gazebo
+office world. Do not use `office_map.yaml`, which is a pixel-converted PDF
+floorplan without real scan data and will cause localization failures.
 
-```text
-/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml
-```
+Nav2 publishes `/map` with transient-local QoS as soon as it starts. The
+connector subscribes to this topic and uploads the map to InOrbit on startup.
 
-This map must match the Gazebo world closely enough for Nav2 localization and
-planning. InOrbit may still show a generic/no map unless the equivalent map is
-configured there too.
-
-After Nav2 starts, there are two ways to seed AMCL:
+After Nav2 starts, seed AMCL initial pose:
 
 Option A, helper script:
 
 ```bash
-docker/ros2_gazebo/scripts/set_initial_pose.sh
+/workspace/turtlebot_connector/docker/ros2_gazebo/scripts/set_initial_pose.sh
 ```
 
-Option B, validated manual flow in RViz:
+Option B, manual in RViz:
 
 - use `2D Pose Estimate`
-- click near the robot spawn location
-- orient the arrow to match the robot heading seen in Gazebo
-
-In the validated sessions, the manual RViz method was used instead of relying
-on the script. This matters because the robot was visually aligned from the same
-spawn position shown on the map and in Gazebo.
-
-Expected Nav2 result:
-
-- `/navigate_to_pose` appears in `ros2 action list`
-- lifecycle nodes such as `/bt_navigator`, `/controller_server`, and
-  `/planner_server` are `active`
-- `tf2_echo map base_link` returns a transform
+- click near the robot spawn location (`x=-2.0, y=-0.5`)
+- orient the arrow to match the robot heading
 
 ### 6. Optional ROS graph check
 
 Inside the container:
 
 ```bash
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/check_ros_graph.sh
+/workspace/turtlebot_connector/docker/ros2_gazebo/scripts/check_ros_graph.sh
 ```
 
 Expected:
@@ -195,75 +178,37 @@ Expected:
 Inside the container:
 
 ```bash
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/run_connector_ros2.sh config/fleet.ros2.local.yaml
+/workspace/turtlebot_connector/docker/ros2_gazebo/scripts/run_connector_ros2.sh \
+  config/fleet.ros2.office.local.yaml
 ```
 
 The script loads `config/.env` and `config/.env.local` without printing secrets.
 
-## Camera Validation Notes
+## What the connector publishes to InOrbit
 
-During RViz validation, the `Image` display subscribed to:
+- **Pose**: from `/odom`, frame `map`
+- **Map**: from `/map` (OccupancyGrid), uploaded as `turtlebot_office_map` on
+  startup. Nav2 must be running and publishing `/map` before the connector
+  starts, otherwise the map upload is silently skipped until the next restart.
+- **Camera**: frames from `/camera/image_raw` published over MQTT as camera
+  channel `0`. Validated at 1 fps, 380x240, quality 30 (rgb8 encoding).
+- **Battery, KVs, navigation actions**: standard connector telemetry
 
-```text
-/camera/image_raw
+## Camera Notes
+
+The RobotCamera CAC (`cac/robot_camera.yaml`) uses:
+
+```yaml
+rosTopic: "0"
 ```
 
-and showed live simulated images. That confirms the ROS-side camera publisher is
-working independently of InOrbit rendering.
+For Edge SDK connectors (`2.1.0.edgesdk_py`), `rosTopic` must be the
+`camera_id`, not the actual ROS topic name. The connector registers the ROS
+topic internally and publishes frames over MQTT. InOrbit uses `rosTopic` to
+identify the MQTT camera channel.
 
-If the connector later logs lines such as:
-
-```text
-Closing ROS camera adapter '0' after receiving 2187 frame(s)
-```
-
-that does not mean the robot camera stopped publishing in ROS. It means the
-InOrbit-side camera subscription/stream was closed after frames had already been
-received. RViz showing live images from `/camera/image_raw` is the stronger
-signal for whether Gazebo/ROS is still publishing.
-
-## Useful Evidence Collected So Far
-
-The following observations are the most useful ones for debugging or escalation:
-
-1. RViz can subscribe to `/camera/image_raw` and shows a live simulated image.
-   This is the strongest evidence that Gazebo and ROS are still publishing
-   camera frames correctly.
-
-2. RViz also shows the Nav2 map, localization, and robot pose at the same time.
-   That confirms the simulation, localization, and camera publisher are alive in
-   the same session.
-
-3. InOrbit `Navigation` can show the robot pose correctly on the map while the
-   camera panel still says `No camera image available`. This proves navigation
-   data is reaching InOrbit even when the camera image is not rendered.
-
-4. A standalone `cameraWidget` using the same `cameraId: "0"` also fails to
-   render the image. This shows the issue is not limited to the `navigation`
-   widget alone.
-
-5. Backend connector logs show all of the following:
-   - the ROS camera is registered in InOrbit
-   - the ROS camera adapter is opened
-   - the first frame is received successfully
-   - hundreds or thousands of frames are received before the adapter is closed
-
-   This is the strongest evidence that the connector is not failing at the ROS
-   subscription stage.
-
-6. Browser console logs show InOrbit-side errors such as:
-   - `configToken ... is null`
-   - `useDirectClientMulti called with an empty or missing robotIds parameter`
-   - `r.reduce is not a function`
-
-   These errors are relevant because they point to a possible frontend or
-   platform-side data/configuration problem after the backend stream has already
-   started.
-
-Taken together, these observations support the conclusion that ROS publishing is
-working, the connector is receiving frames, and the remaining issue appears
-later in the InOrbit-side rendering or data-consumption path.
+For native ROS2 agents (`4.x.x.ros2`), `rosTopic` should be the actual ROS
+topic (e.g. `raspicam_node/image/compressed`).
 
 ## InOrbit Control Test
 
@@ -278,11 +223,7 @@ later in the InOrbit-side rendering or data-consumption path.
 6. Wait for completion and check `task_state=completed`.
 7. Run `Go Station 2`.
 8. While moving, run `Cancel Task` and check `task_state=canceled`.
-9. Open the camera panel and confirm whether the TurtleBot3 camera feed appears.
-
-At the time of writing, navigation/tasks are validated, but camera rendering in
-InOrbit remains unresolved even though `/camera/image_raw` is visible in RViz
-and the backend receives frames.
+9. Confirm camera feed appears in InOrbit Navigation widget.
 
 ## Map Notes
 
@@ -292,9 +233,25 @@ Frames:
 - Odometry frame: `odom`
 - Base frame: `base_link`
 
-The connector publishes pose in `frame_id=map`. For a visually correct InOrbit
-map, upload/register the same map used by Nav2, or configure an equivalent map
-in InOrbit. If the InOrbit map does not match the Nav2 map, actions can still
-drive Gazebo, but the robot position may not line up visually in InOrbit.
+The connector publishes pose in `frame_id=map`. The scanned map
+(`office_scanned.yaml`) is used by both Nav2 and the connector, so the robot
+position lines up correctly in InOrbit.
 
-Automatic map upload is intentionally not implemented in this phase.
+## Re-scanning the map (only if needed)
+
+If the Gazebo world changes and the map needs to be re-scanned:
+
+```bash
+/workspace/turtlebot_connector/docker/ros2_gazebo/scripts/launch_slam.sh
+```
+
+This launches slam_toolbox and Nav2. Teleop the robot to cover the full office
+world, then save:
+
+```bash
+ros2 run nav2_map_server map_saver_cli \
+  -f /tmp/scanned_map/office_scanned
+```
+
+Copy the resulting `.pgm` and `.yaml` to
+`office_demo/maps/office_scanned.pgm` and `office_demo/maps/office_scanned.yaml`.

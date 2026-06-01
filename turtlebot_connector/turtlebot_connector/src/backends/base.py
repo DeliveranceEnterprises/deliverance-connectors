@@ -84,6 +84,14 @@ class TurtlebotBackend(Protocol):
     def dispatch_to(self, waypoint: str, task_id: str = "", label: str = "") -> TurtlebotTask:
         """Start navigation toward a named waypoint."""
 
+    def dispatch_to_pose(
+        self, x: float, y: float, yaw: float, task_id: str = "", label: str = ""
+    ) -> TurtlebotTask:
+        """Start navigation toward a free pose (used by InOrbit Waypoint Teleop)."""
+
+    def relocalize(self, x: float, y: float, yaw: float) -> None:
+        """Reset the robot localization to (x, y, yaw) (used by InOrbit Relocalize)."""
+
     def cancel_task(self, task_id: str = "") -> TurtlebotTask:
         """Cancel the active task."""
 

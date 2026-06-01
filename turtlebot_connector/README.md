@@ -139,27 +139,36 @@ scope: "tag/<ACCOUNT_ID>/<TAG_ID>"
 
 with the real account/tag or robot scope for your test robots.
 
-Apply configuration:
+The CAC files in `cac/` use placeholders `<ACCOUNT_ID>` and `<TURTLEBOT_TAG_ID>`.
+Substitute them before applying — `inorbit apply -f -` does not accept stdin,
+so write to a temp file first:
 
 ```bash
-inorbit apply -f cac/data_sources.yaml
-inorbit apply -f cac/status_definition.yaml
-inorbit apply -f cac/actions.yaml
-inorbit apply -f cac/robot_camera.yaml
+sed -e "s/<ACCOUNT_ID>/${INORBIT_ACCOUNT_ID}/g" \
+    -e "s/<TURTLEBOT_TAG_ID>/<your-turtlebot-tag-id>/g" \
+    cac/data_sources.yaml > /tmp/data_sources.yaml
+yes | inorbit apply -f /tmp/data_sources.yaml
+```
+
+Apply order that works end-to-end:
+
+```bash
+# data sources first — referenced by everything else
+inorbit apply -f cac/data_sources.yaml          # battery, mission_status, ...
+inorbit apply -f cac/status_definition.yaml     # low-battery rules
+inorbit apply -f cac/incident_definition.yaml   # incidents linked to status
+inorbit apply -f cac/preferences.yaml           # navigationWidget whitelist
+inorbit apply -f cac/actions.yaml               # go_to + dispatch-mission
+inorbit apply -f cac/robot_camera.yaml          # camera
+inorbit apply -f cac/mission_definition.yaml    # demo route
+inorbit apply -f cac/dashboard.yaml             # custom dashboard
 ```
 
 Optional placeholder files:
 
 ```bash
 inorbit apply -f cac/footprint.yaml
-```
-
-The repo's current connector CAC pattern does not include ready-made dashboard
-or MissionDefinition files. Start by exporting/tuning those from InOrbit Control
-if you need them:
-
-```bash
-inorbit get config --scope "<scope>" --kind "DashboardDefinition" --yaml > my_dashboards.yaml
+inorbit apply -f cac/mission_tracking.yaml
 ```
 
 List or dump applied configuration:
@@ -189,17 +198,14 @@ The CAC files are coherent with the existing repo style, but they still need to
 be validated against the target InOrbit account because scopes, edition support,
 and available widgets are account-specific.
 
-For the validated TurtleBot demo setup, camera validation ended up using a
-robot-scoped `RobotCamera` with `metadata.id: "0"` so it matched the existing
-InOrbit camera wiring for the demo robot. A dedicated
-`cac/dashboard_camera_test.yaml` was also used to isolate the problem with a
-plain `cameraWidget`.
+For the validated TurtleBot demo setup, the `RobotCamera` CAC uses a
+robot-scoped entry with `metadata.id: "0"`. Camera streaming is validated and
+working in the InOrbit Navigation widget.
 
-At the time of writing, the connector can open the ROS camera adapter and
-receive frames from `/camera/image_raw`, but neither the `navigation` widget nor
-the standalone `cameraWidget` renders the image in InOrbit for this robot. That
-points to a remaining issue in InOrbit-side camera consumption or UI/config
-rather than in the ROS topic itself.
+**Important:** for Edge SDK connectors (`2.1.0.edgesdk_py`), `rosTopic` in
+`RobotCamera` must be the `camera_id` (e.g. `"0"`), not the actual ROS topic
+name. The connector handles the ROS subscription internally and publishes frames
+over MQTT. See `cac/robot_camera.yaml` for the validated configuration.
 
 ## Actions From InOrbit Control
 
@@ -300,42 +306,37 @@ Open the VNC desktop at:
 http://localhost:6080
 ```
 
-Prepare a local ROS config:
+The validated fleet config is already at `config/fleet.ros2.office.local.yaml`.
+Copy it as a starting point if you need a custom variant:
 
 ```bash
-cp config/fleet.ros2.example.yaml config/fleet.ros2.local.yaml
+cp config/fleet.ros2.office.local.yaml config/fleet.ros2.local.yaml
 ```
 
-Inside the container, use separate terminals:
+Inside the container, use four separate terminals:
 
 ```bash
-# Terminal 1
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/launch_sim.sh
+# Terminal 1 — Gazebo + TurtleBot3 waffle_pi
+WORLD_FILE=/workspace/turtlebot_connector/office_demo/worlds/office_world.world \
+  docker/ros2_gazebo/scripts/launch_sim.sh
 
-# Terminal 2
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/launch_nav2.sh
+# Terminal 2 — Nav2 with the SLAM-scanned office map
+docker/ros2_gazebo/scripts/launch_nav2.sh \
+  /workspace/turtlebot_connector/office_demo/maps/office_scanned.yaml
 
-# Terminal 3
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/check_ros_graph.sh
+# Terminal 3 — seed AMCL initial pose
+docker/ros2_gazebo/scripts/set_initial_pose.sh
 
-# Terminal 4
-cd /workspace/turtlebot_connector
-docker/ros2_gazebo/scripts/setup_connector_env.sh
-docker/ros2_gazebo/scripts/run_connector_ros2.sh config/fleet.ros2.local.yaml
+# Terminal 4 — InOrbit connector
+docker/ros2_gazebo/scripts/run_connector_ros2.sh config/fleet.ros2.office.local.yaml
 ```
 
-The default Nav2 map is:
+Nav2 must be running and publishing `/map` before the connector starts —
+the connector uploads the map to InOrbit on startup and does not retry until
+the next restart.
 
-```text
-/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml
-```
-
-The connector uses `frame_id=map`. For a visually correct InOrbit map, register
-the same or equivalent map in InOrbit. Until then, the Nav2 action flow can be
-valid while the InOrbit map visualization remains approximate.
+Always use `office_scanned.yaml` (SLAM scan). Do not use `office_map.yaml`,
+which is a pixel-converted PDF floorplan without real scan data.
 
 ### Camera Streaming
 
@@ -362,21 +363,44 @@ flow to actions: `Go Home`, `Go Station 1`, `Go Station 2`, and `Cancel Task`.
 Mapping the joystick panel to `/cmd_vel` is therefore pending confirmation of
 the supported Edge SDK mechanism for teleop commands.
 
-## API Or Mission Dispatch
+## Mission Dispatch
 
-The connector currently implements direct action handling, not a full
-MissionDefinition catalog.
+`cac/mission_definition.yaml` defines a demo route mission that chains the
+existing `turtlebot-go-station-1`, `turtlebot-go-station-2`, and
+`turtlebot-go-home` actions. It is dispatched from InOrbit Control through the
+`turtlebot-dispatch-demo-route` action (type `DispatchMission`).
 
-If your InOrbit account supports MissionDefinitions or action execution through
-the REST API, the intended flow is:
+The mission illustrates two non-obvious things:
 
-1. Configure `ActionDefinition` objects with the CLI.
-2. Optionally configure MissionDefinitions that dispatch those actions.
-3. Dispatch through InOrbit Control, MissionDefinition support, or the REST API.
-4. Let this connector receive the action/custom command and update the fake task.
+1. **`runAction` steps return immediately** as far as InOrbit's Mission Runner
+   is concerned, so chaining three of them in a row launches all three at once.
+   To force sequential execution we add a `waitUntil` step after each
+   `runAction`.
+2. The expression engine does **not** see transient key-values
+   (`current_waypoint`, `task_label`) reliably — they come back as `None` even
+   when the Key Values panel shows the last value. The JSON key-value
+   `mission_tracking` is visible and persistent. The reliable pattern:
 
-Do not treat the CLI as the runtime task dispatcher unless the official CLI
-documentation for your installed version explicitly supports that operation.
+   ```yaml
+   - label: Go to Station 1
+     runAction:
+       actionId: turtlebot-go-station-1
+   - label: Wait for arrival at Station 1
+     timeoutSecs: 180
+     waitUntil:
+       expression: (t = getValue('mission_tracking')); t.data.waypoint == 'station_1' and t.state == 'Completed'
+   ```
+
+To validate an expression live against the robot before applying:
+
+```bash
+inorbit expr eval turtlebot-demo-01 \
+  "(t = getValue('mission_tracking')); t.state"
+```
+
+The runtime command path is still the same: InOrbit Control (or a dispatched
+mission) calls the `RunScript` action, the connector receives it as a custom
+command, and routes it through the selected backend.
 
 ## Development
 
@@ -386,11 +410,6 @@ Run tests and linting:
 uv run pytest
 uv run ruff check
 ```
-
-## Next Phase
-
-Validate teleop/RCP support and, if the Edge SDK exposes a supported runtime
-callback for joystick commands, map it to ROS `/cmd_vel`.
 
 ## References
 

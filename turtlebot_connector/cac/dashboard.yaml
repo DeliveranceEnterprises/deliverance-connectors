@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# TurtleBot Navigation dashboard — visible only for robots tagged with <TURTLEBOT_TAG_ID>.
+# Replace <ACCOUNT_ID> and <TURTLEBOT_TAG_ID> before applying.
+# Dashboard scope must be account-level (InOrbit API restriction);
+# per-robot visibility is achieved via conditional: tags on each section.
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: turtlebotCameraTest20260522
+  scope: account/<ACCOUNT_ID>
+spec:
+  label: TurtleBot Navigation
+  sections:
+  - conditional:
+      tags:
+      - <TURTLEBOT_TAG_ID>
+    label: Fleet Status
+    scope: fleet
+    widgets:
+    - config:
+        statuses:
+        - id: turtlebot-battery
+      label: Robot Status
+      layout:
+        grid: 12
+        height: 1
+      type: fleetStatus
+    - label: TurtleBot Incidents
+      layout:
+        grid: 12
+        height: 2
+      type: incidentList
+  - conditional:
+      tags:
+      - <TURTLEBOT_TAG_ID>
+    label: Robot Navigation
+    scope: navigation
+    widgets:
+    - label: Navigation
+      layout:
+        grid: 12
+        height: 2
+      type: navigation
+    withControlWidget: true
+  - conditional:
+      tags:
+      - <TURTLEBOT_TAG_ID>
+    label: Details
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: turtlebot-battery
+          label: Battery
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - label: Audit Log
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: auditLog
+    - label: Modes and Tags
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: tagsAndModes
+    - config:
+        actionIds:
+        - turtlebot-go-home
+        - turtlebot-go-station-1
+        - turtlebot-go-station-2
+        - turtlebot-cancel-task
+        bigButtons: true
+        expanded: true
+      label: TurtleBot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    withControlWidget: true

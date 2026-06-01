@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Demo mission: Station 1 → Station 2 → Home, chaining the existing
+# turtlebot-go-* actions. Between each runAction we wait for two conditions:
+#   1) current_waypoint == "<destination>" — the connector has started the task
+#   2) mission_status == "Idle" — the connector has finished the task
+# These keys are published by the connector in the standard key-value telemetry.
+
+apiVersion: v0.1
+kind: MissionDefinition
+metadata:
+  id: turtlebot-demo-route
+  scope: account/<ACCOUNT_ID>
+spec:
+  label: TurtleBot Demo Route
+  selector:
+    robot:
+      tagIds:
+        - <TURTLEBOT_TAG_ID>
+  steps:
+    - label: Go to Station 1
+      runAction:
+        actionId: turtlebot-go-station-1
+    - label: Wait for arrival at Station 1
+      timeoutSecs: 180
+      waitUntil:
+        expression: (t = getValue('mission_tracking')); t.data.waypoint == 'station_1' and t.state == 'Completed'
+
+    - label: Go to Station 2
+      runAction:
+        actionId: turtlebot-go-station-2
+    - label: Wait for arrival at Station 2
+      timeoutSecs: 180
+      waitUntil:
+        expression: (t = getValue('mission_tracking')); t.data.waypoint == 'station_2' and t.state == 'Completed'
+
+    - label: Return Home
+      runAction:
+        actionId: turtlebot-go-home
+    - label: Wait for arrival at Home
+      timeoutSecs: 180
+      waitUntil:
+        expression: (t = getValue('mission_tracking')); t.data.waypoint == 'home' and t.state == 'Completed'
