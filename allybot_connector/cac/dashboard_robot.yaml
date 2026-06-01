@@ -1,0 +1,1160 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Global Robot dashboard — adds an Allybot-specific section conditioned on the
+# Allybot hardware tag. Only robots with that tag will see this section.
+# All existing sections of d-Robot-lLybVa are preserved as-is.
+#
+# WARNING: this file contains the full dashboard spec including sections for
+# other robots. Do not remove other robots' sections when applying.
+#
+# Apply with:
+#   sed -e "s/<ACCOUNT_ID>/rnLasGAxn5CP7bj32/g" \
+#       cac/dashboard_robot.yaml > /tmp/robot.yaml
+#   yes | inorbit apply -f /tmp/robot.yaml
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: d-Robot-lLybVa
+  scope: account/<ACCOUNT_ID>
+spec:
+  label: Robot
+  order: 2
+  sections:
+  - label: Summary
+    scope: robot
+    widgets:
+    - conditional:
+        not:
+          tags:
+          - nfdMLLGCZ6_EyYSX
+          - RSPeer
+          - unxlDBfILnQ348gh
+          - R-wy9mPv4s7YUlfl
+          - BdQNc-BFrhWmi4Mk
+      config:
+        dataSources:
+        - id: diskUsagePercentage
+          label: Disk usage
+          type: gauge
+          unit: '%'
+        - id: cpuLoadPercentage
+          label: CPU usage
+          type: gauge
+          unit: '%'
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - conditional:
+        tags:
+        - nfdMLLGCZ6_EyYSX
+      config:
+        dataSources:
+        - id: battery_time_remaining
+          label: Battery Remaining Time
+          type: text
+          unit: s
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - conditional:
+        tags:
+        - R-wy9mPv4s7YUlfl
+      config:
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - conditional:
+        tags:
+        - BdQNc-BFrhWmi4Mk
+      config:
+        dataSources:
+        - id: safeguard-zone-green-count
+          label: Zone Green Count
+          type: text
+        - id: safeguard-zone-orange-count
+          label: Zone Orange Count
+          type: text
+        - id: safeguard-zone-red-count
+          label: Zone Red Count
+          type: text
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - label: Modes and Tags
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: tagsAndModes
+    - conditional:
+        tags:
+        - BdQNc-BFrhWmi4Mk
+      label: Key Value pairs
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: keyValues
+    - conditional:
+        not:
+          tags:
+          - BdQNc-BFrhWmi4Mk
+      label: Missions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: missionTracker
+    - conditional:
+        not:
+          collections:
+          - RSPeer
+          - unxlDBfILnQ348gh
+          - B5SMxpwaqUngpfAH
+          - BdQNc-BFrhWmi4Mk
+      config: {}
+      label: Robot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - conditional:
+        tags:
+        - B5SMxpwaqUngpfAH
+      config:
+        actionIds:
+        - wes-restart
+      label: Robot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - conditional:
+        tags:
+        - RSPeer
+      config:
+        actionIds:
+        - peer-dock
+        - peer-undock
+        - peer-undock
+        - peer-set-ready
+        - peer-set-no-ready
+        - pauseRobot
+        - resumeRobot
+        - resumeRobot
+        - peer_set_next_mission_step
+        - peer-circular-mfg
+      label: Robot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - conditional:
+        tags:
+        - unxlDBfILnQ348gh
+      config:
+        actionIds:
+        - pauseRobot
+        - resumeRobot
+        - repeatRun
+        - cancelRun
+        - startbyTeachIDRoutine
+        - cleanFrontbyTeachIDRoutine
+        - cleanBackbyTeachIDRoutine
+        - cleanFront_byid
+        - cancelRoutine
+        - pause
+        - resume
+        - dock
+        - undock
+      label: Robot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - label: Audit Log
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: auditLog
+    - conditional:
+        tags:
+        - BdQNc-BFrhWmi4Mk
+      config:
+        chartType: linechart
+        dataSources:
+        - id: safeguard-zone-green-count
+          label: Zone Green Count
+        - id: safeguard-zone-orange-count
+          label: Zone Orange Count
+        - id: safeguard-zone-red-count
+          label: Zone Red Count
+        - id: safeguard-zone-green-occupied
+          label: Zone Green Occupied
+        - id: safeguard-zone-orange-occupied
+          label: Zone Orange Occupied
+        - id: safeguard-zone-red-occupied
+          label: Zone Red Occupied
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - conditional:
+        not:
+          tags:
+          - BdQNc-BFrhWmi4Mk
+      config: {}
+      label: Map
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: localization
+    - conditional:
+        tags:
+        - RSPeer
+      config:
+        chartType: linechart
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          scale: 100
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: chart
+    - conditional:
+        tags:
+        - unxlDBfILnQ348gh
+      config:
+        dataSources:
+        - id: freshWater
+          label: Fresh Water
+          type: gauge
+          unit: '%'
+        - id: dirtWaterFull
+          label: Dirty Water Full
+          type: text
+          unit: bool
+      label: Water Levels
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    withControlWidget: true
+  - conditional:
+      tags:
+      - StdZGa32GmBLReFr
+    label: Allybot
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: allybot-battery
+          label: Battery
+          type: gauge
+          unit: '%'
+        - id: allybot-fresh-water
+          label: Fresh Water
+          type: gauge
+          unit: '%'
+        - id: allybot-sewage-water
+          label: Sewage Water
+          type: gauge
+          unit: '%'
+        - id: allybot-task-percentage
+          label: Task Progress
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - config:
+        dataSources:
+        - id: allybot-work-status
+          label: Work Status
+          type: text
+        - id: allybot-task-name
+          label: Task
+          type: text
+        - id: allybot-have-task-running
+          label: Task Running
+          type: text
+        - id: allybot-map-name
+          label: Map
+          type: text
+        - id: allybot-speed
+          label: Speed
+          type: text
+      label: Status
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: allybot-battery
+          label: Battery
+          precision: 1
+        - id: allybot-fresh-water
+          label: Fresh Water
+          precision: 1
+        - id: allybot-sewage-water
+          label: Sewage Water
+          precision: 1
+        - id: allybot-task-percentage
+          label: Task Progress
+          precision: 1
+        max: 1
+        min: 0
+      label: Water, Battery & Task Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: allybot-speed
+          label: Speed (m/s)
+          precision: 2
+        max: null
+        min: 0
+      label: Speed Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    withControlWidget: false
+  - conditional:
+      tags:
+      - StdZGa32GmBLReFr
+    label: Allybot MQTT
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+        max: 400
+        min: 0
+      label: 'MQTT Speed: Latency and RTT'
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+          type: text
+      label: MQTT History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 8gMbOLofiZYK0uKx
+    label: Autoxing
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: autoxing-battery
+          label: Battery
+          type: gauge
+          unit: '%'
+        - id: autoxing-loc-quality
+          label: Loc Quality
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - config:
+        dataSources:
+        - id: autoxing-api-connected
+          label: API Connected
+          type: text
+        - id: autoxing-online-status
+          label: Online
+          type: text
+        - id: autoxing-is-charging
+          label: Charging
+          type: text
+        - id: autoxing-is-manual-mode
+          label: Manual Mode
+          type: text
+        - id: autoxing-is-remote-mode
+          label: Remote Mode
+          type: text
+        - id: autoxing-is-go-home
+          label: Going Home
+          type: text
+        - id: autoxing-has-obstruction
+          label: Obstruction
+          type: text
+        - id: autoxing-is-emergency-stop
+          label: Emergency Stop
+          type: text
+        - id: autoxing-current-area
+          label: Current Area
+          type: text
+        - id: autoxing-task-id
+          label: Task ID
+          type: text
+        - id: autoxing-task-is-finish
+          label: Task Finished
+          type: text
+        - id: autoxing-task-is-cancel
+          label: Task Cancelled
+          type: text
+        - id: autoxing-errors
+          label: Errors
+          type: text
+      label: Status
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    - config:
+        actionIds:
+        - autoxing-go-to-a
+        - autoxing-go-to-b
+        - autoxing-go-to-home
+        - autoxing-go-home
+        - autoxing-cancel-task
+        bigButtons: true
+        expanded: true
+      label: Autoxing Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: missionTracker
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: autoxing-battery
+          label: Battery
+          precision: 1
+        - id: autoxing-loc-quality
+          label: Loc Quality
+          precision: 1
+        max: 1
+        min: 0
+      label: Battery & Localization Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 8gMbOLofiZYK0uKx
+    label: Autoxing MQTT
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+        max: 400
+        min: 0
+      label: 'MQTT Speed: Latency and RTT'
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+          type: text
+      label: MQTT History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
+  - conditional:
+      tags:
+      - DJbJhivzeMvXDj8z
+    label: Keenon
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+          unit: '%'
+        - id: keenon-clean-water-tank
+          label: Water Tank
+          type: text
+        - id: keenon-clean-bilge-tank
+          label: Waste Tank
+          type: text
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - config:
+        dataSources:
+        - id: keenon-api-connected
+          label: API Connected
+          type: text
+        - id: keenon-online-status
+          label: Online
+          type: text
+        - id: keenon-charge-status
+          label: Charge Status
+          type: text
+        - id: keenon-can-be-called
+          label: Available
+          type: text
+        - id: keenon-current-scene
+          label: Current Scene
+          type: text
+        - id: keenon-task-status
+          label: Task Status
+          type: text
+        - id: keenon-task-no
+          label: Task No
+          type: text
+        - id: keenon-robot-model
+          label: Robot Model
+          type: text
+        - id: keenon-app-version
+          label: App Version
+          type: text
+        - id: keenon-clean-main-state
+          label: Clean State
+          type: text
+        - id: keenon-clean-sub-state
+          label: Clean Sub State
+          type: text
+        - id: keenon-clean-faulting
+          label: Fault
+          type: text
+        - id: keenon-clean-emergency-stop
+          label: Emergency Stop
+          type: text
+      label: Status
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    - config:
+        actionIds:
+        - keenon-send-to-mesa-1
+        - keenon-send-to-mesa-2
+        - keenon-send-to-mesa-3
+        - keenon-return-to-origin
+        - keenon-cancel-task
+        - keenon-open-cabin
+        - keenon-close-cabin
+        - keenon-clean-recharge
+        - keenon-clean-finish
+        - keenon-clean-pause
+        - keenon-clean-temporary-task
+        bigButtons: true
+        expanded: true
+      label: Keenon Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: missionTracker
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: keenon-battery
+          label: Battery
+          precision: 1
+        max: 1
+        min: 0
+      label: Battery Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    withControlWidget: false
+  - conditional:
+      tags:
+      - DJbJhivzeMvXDj8z
+    label: Keenon MQTT
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+        max: 400
+        min: 0
+      label: 'MQTT Speed: Latency and RTT'
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+          type: text
+      label: MQTT History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
+  - conditional:
+      tags:
+      - unxlDBfILnQ348gh
+    label: Kira
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: freshWater
+          label: Fresh Water
+          precision: 1
+          scale: 100
+        - id: progressDS
+          label: Progress
+          precision: 1
+          scale: 100
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery Level
+          precision: 1
+          scale: 100
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: mission_status
+          label: Mission status
+          type: text
+        - id: freshWater
+          label: Fresh Water
+          type: gauge
+        - id: dirtWaterFull
+          label: Dirt Water Full
+          type: text
+        - id: progressDS
+          label: Progress
+          type: text
+        - id: cleaningCommand
+          label: Cleaning Command
+          type: text
+        - id: activeRepeatId
+          label: Current RepeatID
+          type: text
+        - id: repeatID
+          label: Repeat ID
+          type: text
+        - id: nameLastMission
+          label: Last Mission
+          type: text
+        - id: teachIDLastMission
+          label: Last Mission TeachID
+          type: text
+        - id: progressLastMission
+          label: Last Mission Progress
+          type: text
+        - id: distanceLastMission
+          label: Last Mission Distance
+          type: text
+      label: Mission Data
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+  - conditional:
+      tags:
+      - dT_B2luhESDW1al9
+    label: InStock
+    scope: robot
+    widgets:
+    - conditional:
+        not:
+          collections:
+          - RSPeer
+          - unxlDBfILnQ348gh
+      config:
+        dataSources:
+        - id: instock_current_order_status
+          label: Order status
+          type: text
+        - id: instock_current_order_id
+          label: Order ID
+          type: text
+        - id: instock_current_order_order_id
+          label: Organization ID
+          type: text
+        - id: instock_current_order_site_id
+          label: Site ID
+          type: text
+        - id: instock_current_order_1_article_id
+          label: Article 1 - ID
+          type: text
+        - id: instock_current_order_1_article_qty
+          label: Article 1 - QTY
+          type: text
+        - id: instock_current_order_2_article_id
+          label: Article 2 - ID
+          type: text
+        - id: instock_current_order_2_article_qty
+          label: Article 2 - QTY
+          type: text
+      label: Current order
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: listData
+    - config:
+        dataSources:
+        - id: instock_inventory_article_1_id
+          label: Art 1 ID
+          type: text
+        - id: instock_inventory_article_2_id
+          label: Art 2 ID
+          type: text
+        - id: instock_inventory_article_2_qty
+          label: Art 2 quantity
+          type: text
+        - id: instock_inventory_article_3_id
+          label: Art 3 ID
+          type: text
+        - id: instock_inventory_article_3_qty
+          label: Art 3 quantity
+          type: text
+      label: Inventory
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: listData
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 2B8px_xcd91F3XRA
+      - unxlDBfILnQ348gh
+      - Oaw-HYmu2oq4nPK2
+      - NJQh0hWLxUg3ZQA2
+    label: Details
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: cpuLoadPercentage
+          label: CPU usage
+          precision: 1
+          scale: 100
+        - id: diskUsagePercentage
+          label: Disk usage
+          precision: 1
+          scale: 100
+        - id: ramUsagePercentage
+          label: RAM usage
+          precision: 1
+          scale: 100
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+  - conditional:
+      tags:
+      - nfdMLLGCZ6_EyYSX
+    label: Details
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery Level
+          precision: 1
+          scale: 100
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - label: Key Value pairs
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: keyValues
+    - conditional:
+        not:
+          collections:
+          - RSPeer
+          - unxlDBfILnQ348gh
+      config:
+        chartType: linechart
+        dataSources:
+        - id: networkInOrbitRate
+          label: InOrbit network rate
+          precision: 0
+        max: null
+        min: null
+      label: Network
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - conditional:
+        not:
+          tags:
+          - nfdMLLGCZ6_EyYSX
+      config:
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+        - id: cpuLoadPercentage
+          label: CPU usage
+          precision: 1
+          type: gauge
+        - id: ramUsagePercentage
+          label: RAM usage
+          precision: 1
+          type: gauge
+        - id: battery_voltage
+          label: Battery Voltage
+          type: text
+        - id: mission_status
+          label: Mission status
+          type: text
+      label: Current Health
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    - conditional:
+        tags:
+        - nfdMLLGCZ6_EyYSX
+      config:
+        dataSources:
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          type: gauge
+        - id: battery_time_remaining
+          label: Battery Remaining Time
+          type: text
+        - id: mission_status
+          label: Mission status
+          type: text
+        - id: robot_name
+          label: Robot Name
+          type: text
+        - id: robot_model
+          label: Robot Model
+          type: text
+        - id: robot_ip
+          label: Robot IP
+          type: text
+        - id: connector_version
+          label: Connector Version
+          type: text
+      label: Current Health
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    withControlWidget: false
+  - conditional:
+      tags:
+      - dT_B2luhESDW1al9
+      - NJQh0hWLxUg3ZQA2
+    label: Details
+    scope: robot
+    widgets:
+    - label: Key Value pairs
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: keyValues
+    withControlWidget: false
+  - conditional:
+      not:
+        tags:
+        - 2B8px_xcd91F3XRA
+        - BdQNc-BFrhWmi4Mk
+    label: Details
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: cpuLoadPercentage
+          label: CPU usage
+          precision: 1
+          scale: 100
+        - id: diskUsagePercentage
+          label: Disk usage
+          precision: 1
+          scale: 100
+        - id: ramUsagePercentage
+          label: RAM usage
+          precision: 1
+          scale: 100
+        - id: xlXPmDo3Z3GMwSTM
+          label: Battery
+          precision: 1
+          scale: 100
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - label: Key Value pairs
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: keyValues
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 2B8px_xcd91F3XRA
+      - RSMiR100
+      - dT_B2luhESDW1al9
+      - OlqYguTTHTmhb-tK
+      - iplR5gpJY_uXJRM8
+      - 7yscxIzNs7nQjWBL
+      - NJQh0hWLxUg3ZQA2
+    label: MQTT
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+        max: 400
+        min: 0
+      label: 'MQTT Speed: Latency and RTT'
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+          type: text
+      label: MQTT History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 2B8px_xcd91F3XRA
+    label: ROS
+    scope: robot
+    widgets:
+    - label: ROS Diagnostics
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: diagnostics
+    - label: Data Bags
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: dataBags
+    - label: ROS out
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: logsWidget
+    withControlWidget: false
+  - conditional:
+      tags:
+      - HKH4LhoRW3Hg2Rbp
+    label: Details
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: cpuLoadPercentage
+          label: CPU usage
+          precision: 1
+          scale: 100
+        - id: diskUsagePercentage
+          label: Disk usage
+          precision: 1
+          scale: 100
+        - id: ramUsagePercentage
+          label: RAM usage
+          precision: 1
+          scale: 100
+        max: null
+        min: null
+      label: Timeline
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - label: Key Value pairs
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: keyValues
+    withControlWidget: false
+  - conditional:
+      tags:
+      - RSMiR100
+    label: Debug
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: mir_robotBlocked
+          label: Robot Blocked
+          type: text
+      label: Robot Blocked History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    - config:
+        dataSources:
+        - id: mir_robotStopped
+          label: Robot Stopped
+          type: text
+      label: Robot Stopped History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    - config:
+        dataSources:
+        - id: mir_vad_null
+          label: VAD Null
+          type: text
+      label: VAD Null History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
