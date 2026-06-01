@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# IncidentDefinitions for Keenon. IDs match StatusDefinition IDs.
+
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: keenon-battery
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  label: Keenon Low Battery
+  warning:
+    notificationChannels:
+      - app
+    severity: SEV 2
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: keenon-api-connected
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  label: Keenon API Disconnected
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: keenon-clean-faulting
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  label: Keenon Cleaning Fault
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []
+---
+apiVersion: v0.1
+kind: IncidentDefinition
+metadata:
+  id: keenon-clean-emergency-stop
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  label: Keenon Cleaning Emergency Stop
+  error:
+    notificationChannels:
+      - app
+    severity: SEV 1
+  ok:
+    notificationChannels: []

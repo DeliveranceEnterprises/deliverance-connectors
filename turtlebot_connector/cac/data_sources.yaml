@@ -13,9 +13,10 @@ metadata:
 spec:
   label: Battery
   unit: "%"
+  scale: 0.01
   source:
     keyValue:
-      key: battery
+      key: battery_percent
   timeline:
     fieldType: number
 ---
