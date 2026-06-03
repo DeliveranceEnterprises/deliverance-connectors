@@ -2,20 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Global Navigation dashboard — adds an Allybot-specific section conditioned
-# on the Allybot hardware tag. Only robots with that tag will see this section.
-# The existing sections (Robot Navigation, Details) are preserved as-is.
-#
-# Apply with:
-#   sed -e "s/<ACCOUNT_ID>/rnLasGAxn5CP7bj32/g" \
-#       cac/dashboard_navigation.yaml > /tmp/nav.yaml
-#   yes | inorbit apply -f /tmp/nav.yaml
+# Global Navigation dashboard — adds Keenon-specific section.
+# Preferences/control widget NOT touched — already working for Keenon.
 
 apiVersion: v0.1
 kind: DashboardDefinition
 metadata:
   id: d-Navigation-Z8YZAb
-  scope: account/<ACCOUNT_ID>
+  scope: account/rnLasGAxn5CP7bj32
 spec:
   label: Navigation
   order: 3
@@ -72,6 +66,96 @@ spec:
         bigButtons: true
         expanded: true
       label: Allybot Actions
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: missionTracker
+    withControlWidget: false
+  - conditional:
+      tags:
+      - 8gMbOLofiZYK0uKx
+    label: Autoxing
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - autoxing-go-to-a
+        - autoxing-go-to-b
+        - autoxing-go-to-home
+        - autoxing-go-home
+        - autoxing-cancel-task
+        bigButtons: true
+        expanded: true
+      label: Autoxing Actions
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: missionTracker
+    withControlWidget: false
+  - conditional:
+      tags:
+      - QJoR03aXlEhZkD6N
+    label: TurtleBot
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - turtlebot-go-home
+        - turtlebot-go-station-1
+        - turtlebot-go-station-2
+        - turtlebot-cancel-task
+        - turtlebot-dispatch-demo-route
+        bigButtons: true
+        expanded: true
+      label: TurtleBot Actions
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: missionTracker
+    withControlWidget: false
+  - conditional:
+      tags:
+      - DJbJhivzeMvXDj8z
+    label: Keenon
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - keenon-send-to-mesa-1
+        - keenon-send-to-mesa-2
+        - keenon-send-to-mesa-3
+        - keenon-return-to-origin
+        - keenon-cancel-task
+        - keenon-open-cabin
+        - keenon-close-cabin
+        - keenon-clean-recharge
+        - keenon-clean-finish
+        - keenon-clean-pause
+        - keenon-clean-temporary-task
+        bigButtons: true
+        expanded: true
+      label: Keenon Actions
       layout:
         chroma: true
         grid: 6

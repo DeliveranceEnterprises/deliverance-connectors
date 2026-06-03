@@ -43,12 +43,12 @@ yes | inorbit apply -f cac/foo.yaml
 | Dashboard | ID | Order | Rule |
 |---|---|---|---|
 | Robot | `d-Robot-lLybVa` | 2 | **Single file** manages all robots. File lives at `allybot_connector/cac/dashboard_robot.yaml`. |
-| Navigation | `d-Navigation-Z8YZAb` | 3 | Each connector has its own `cac/dashboard_navigation.yaml` — each one contains the full spec including all other robots' sections. Keep them in sync. |
+| Navigation | `d-Navigation-Z8YZAb` | 3 | **Single file** manages all robots. File lives at `allybot_connector/cac/dashboard_navigation.yaml`. |
 | Fleet | `d-Fleet-FWDce3` | — | **Never touch.** |
 
 ### How to add a new robot's section
 1. Edit `allybot_connector/cac/dashboard_robot.yaml` — add a new `conditional: {tags: [<NEW_TAG_ID>]}` section after the last robot section and before the pre-existing Kira/InStock/MIR100 sections.
-2. Edit every connector's `cac/dashboard_navigation.yaml` — add the new section there too (or pick one connector to own the Navigation dashboard, like allybot_connector owns the Robot dashboard).
+2. Edit `allybot_connector/cac/dashboard_navigation.yaml` — add the new section there too.
 3. Apply both files.
 
 ### Current sections in d-Robot-lLybVa (2026-06-01)
