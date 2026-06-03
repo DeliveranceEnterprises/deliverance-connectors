@@ -108,6 +108,34 @@ spec:
     withControlWidget: false
   - conditional:
       tags:
+      - QJoR03aXlEhZkD6N
+    label: TurtleBot
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - turtlebot-go-home
+        - turtlebot-go-station-1
+        - turtlebot-go-station-2
+        - turtlebot-cancel-task
+        - turtlebot-dispatch-demo-route
+        bigButtons: true
+        expanded: true
+      label: TurtleBot Actions
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: missionTracker
+    withControlWidget: false
+  - conditional:
+      tags:
       - DJbJhivzeMvXDj8z
     label: Keenon
     scope: robot

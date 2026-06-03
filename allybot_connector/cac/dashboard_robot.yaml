@@ -343,21 +343,36 @@ spec:
         - id: allybot-battery
           label: Battery
           precision: 1
-        - id: allybot-fresh-water
-          label: Fresh Water
-          precision: 1
-        - id: allybot-sewage-water
-          label: Sewage Water
-          precision: 1
+          scale: 100
         - id: allybot-task-percentage
           label: Task Progress
           precision: 1
-        max: 1
+          scale: 100
+        max: 100
         min: 0
-      label: Water, Battery & Task Timeline
+      label: Battery & Task Progress Timeline
       layout:
         chroma: true
-        grid: 8
+        grid: 12
+        height: 1
+      type: chart
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: allybot-fresh-water
+          label: Fresh Water
+          precision: 1
+          scale: 100
+        - id: allybot-sewage-water
+          label: Sewage Water
+          precision: 1
+          scale: 100
+        max: 100
+        min: 0
+      label: Water Timeline
+      layout:
+        chroma: true
+        grid: 12
         height: 1
       type: chart
     - config:
@@ -371,7 +386,7 @@ spec:
       label: Speed Timeline
       layout:
         chroma: true
-        grid: 8
+        grid: 12
         height: 1
       type: chart
     withControlWidget: false
@@ -502,15 +517,17 @@ spec:
         - id: autoxing-battery
           label: Battery
           precision: 1
+          scale: 100
         - id: autoxing-loc-quality
           label: Loc Quality
           precision: 1
-        max: 1
+          scale: 100
+        max: 100
         min: 0
       label: Battery & Localization Timeline
       layout:
         chroma: true
-        grid: 8
+        grid: 12
         height: 1
       type: chart
     withControlWidget: false
@@ -649,12 +666,12 @@ spec:
         - id: keenon-battery
           label: Battery
           precision: 1
-        max: 1
+        max: 100
         min: 0
       label: Battery Timeline
       layout:
         chroma: true
-        grid: 8
+        grid: 12
         height: 1
       type: chart
     withControlWidget: false
@@ -662,6 +679,182 @@ spec:
       tags:
       - DJbJhivzeMvXDj8z
     label: Keenon MQTT
+    scope: robot
+    widgets:
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+        max: 400
+        min: 0
+      label: 'MQTT Speed: Latency and RTT'
+      layout:
+        chroma: true
+        grid: 8
+        height: 1
+      type: chart
+    - config:
+        dataSources:
+        - id: pingAvg
+          label: Averaged Ping Time
+          type: text
+      label: MQTT History
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: history
+    withControlWidget: false
+  - conditional:
+      tags:
+      - QJoR03aXlEhZkD6N
+    label: TurtleBot
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: turtlebot-battery
+          label: Battery
+          type: gauge
+          unit: '%'
+      label: Vitals
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: vitals
+    - config:
+        dataSources:
+        - id: turtlebot-operational-state
+          label: Operational State
+          type: text
+        - id: turtlebot-current-waypoint
+          label: Current Waypoint
+          type: text
+        - id: mission_status
+          label: Mission Status
+          type: text
+      label: Status
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: listData
+    - config:
+        actionIds:
+        - turtlebot-go-home
+        - turtlebot-go-station-1
+        - turtlebot-go-station-2
+        - turtlebot-cancel-task
+        - turtlebot-dispatch-demo-route
+        bigButtons: true
+        expanded: true
+      label: TurtleBot Actions
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: actionsWidget
+    - label: Mission
+      layout:
+        chroma: true
+        grid: 4
+        height: 1
+      type: missionTracker
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: turtlebot-battery
+          label: Battery
+          precision: 1
+          scale: 100
+        max: 100
+        min: 0
+      label: Battery Timeline
+      layout:
+        chroma: true
+        grid: 12
+        height: 1
+      type: chart
+    withControlWidget: false
+  - conditional:
+      tags:
+      - kR4yZ9SrGPBnWiwi
+    label: TurtleBot Cleaning
+    scope: robot
+    widgets:
+    - config:
+        dataSources:
+        - id: turtlebot-clean-water-tank
+          label: Clean Water
+          type: gauge
+          unit: '%'
+        - id: turtlebot-dirty-water-tank
+          label: Dirty Water
+          type: gauge
+          unit: '%'
+        - id: turtlebot-detergent-tank
+          label: Detergent
+          type: gauge
+          unit: '%'
+      label: Tanks
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: vitals
+    - config:
+        dataSources:
+        - id: turtlebot-cleaning-mode
+          label: Cleaning Mode
+          type: text
+        - id: turtlebot-brush-status
+          label: Brush Status
+          type: text
+        - id: turtlebot-vacuum-status
+          label: Vacuum Status
+          type: text
+        - id: turtlebot-clean-faulting
+          label: Fault
+          type: text
+        - id: turtlebot-clean-emergency-stop
+          label: Emergency Stop
+          type: text
+      label: Cleaning Status
+      layout:
+        chroma: true
+        grid: 6
+        height: 1
+      type: listData
+    - config:
+        chartType: linechart
+        dataSources:
+        - id: turtlebot-clean-water-tank
+          label: Clean Water
+          precision: 1
+          scale: 100
+        - id: turtlebot-dirty-water-tank
+          label: Dirty Water
+          precision: 1
+          scale: 100
+        - id: turtlebot-detergent-tank
+          label: Detergent
+          precision: 1
+          scale: 100
+        max: 100
+        min: 0
+      label: Tanks Timeline
+      layout:
+        chroma: true
+        grid: 12
+        height: 1
+      type: chart
+    withControlWidget: false
+  - conditional:
+      tags:
+      - QJoR03aXlEhZkD6N
+    label: TurtleBot MQTT
     scope: robot
     widgets:
     - config:
