@@ -66,9 +66,16 @@ class DataPoller:
                 pass
 
     async def _poll_once(self) -> None:
-        # Fetch list for online/isTask flags
-        robot_list = await self._client.get_robot_list()
-        fleet_online: dict[str, dict] = {r["robotId"]: r for r in robot_list if "robotId" in r}
+        # Fetch list for online/isTask flags.  This endpoint (/robot/v1.1/list)
+        # 500s intermittently on AutoXing's side — isolate it so a list failure
+        # never blocks the per-robot state poll below (which carries taskObj and
+        # is what drives mission detection).
+        fleet_online: dict[str, dict] = {}
+        try:
+            robot_list = await self._client.get_robot_list()
+            fleet_online = {r["robotId"]: r for r in robot_list if "robotId" in r}
+        except Exception as exc:
+            logger.warning("Robot list fetch failed (continuing with per-robot state): %s", exc)
 
         for robot_id, fleet_id in self._robot_id_to_fleet_id.items():
             state = self._robot_states[robot_id]
@@ -77,16 +84,22 @@ class DataPoller:
             if list_entry:
                 state.online = bool(list_entry.get("isOnLine", False))
                 state.is_task = bool(list_entry.get("isTask", False))
-            else:
-                state.online = False
 
-            # Per-robot detailed state
+            # Per-robot detailed state — the authoritative source for pose,
+            # battery and taskObj.  get_robot_state already swallows errors and
+            # returns None, so one robot failing does not abort the cycle.
             raw = await self._client.get_robot_state(fleet_id)
             if raw:
                 self._apply_state(state, raw)
                 state.api_connected = True
+                # Per-robot state proves the robot is reachable; trust it for
+                # online even when the fleet list call failed.
+                if not list_entry:
+                    state.online = True
             else:
                 state.api_connected = False
+                if not list_entry:
+                    state.online = False
 
             state.last_update = time.time()
 
@@ -138,6 +151,12 @@ class DataPoller:
             state.task_start_ts = int(time.time() * 1000)
             state.task_is_finish = False
             state.task_is_cancel = False
+            # Reset execution metrics for the new task.
+            state.task_mileage = None
+            state.task_total_dis = None
+            state.task_duration = None
+            state.task_target_name = None
+            state.task_type = None
         elif task_id:
             state.task_is_finish = task_obj.get("isFinish", False)
             state.task_is_cancel = task_obj.get("isCancel", False)
@@ -145,3 +164,21 @@ class DataPoller:
             # Task cleared by robot
             state.task_is_finish = True
             # Keep task_id so connector can publish final mission_tracking
+
+        # Capture execution metrics while the task is active.  taskObj vanishes
+        # once the task ends, so these are the only source for the report.
+        if task_id:
+            mileage = task_obj.get("mileage")
+            if mileage is not None:
+                state.task_mileage = float(mileage)
+            total_dis = task_obj.get("totalDis")
+            if total_dis is not None:
+                state.task_total_dis = float(total_dis)
+            duration = task_obj.get("duration")
+            if duration is not None:
+                state.task_duration = int(duration)
+            target = task_obj.get("target") or {}
+            if target.get("name"):
+                state.task_target_name = target["name"]
+            if task_obj.get("taskType") is not None:
+                state.task_type = task_obj.get("taskType")

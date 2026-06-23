@@ -21,11 +21,13 @@ class AutoxingRobotConfig(RobotConfig):
 
     Attributes:
         fleet_robot_id: AutoXing robot ID string.
+        name: Optional display name shown in InOrbit.
         area_map_config: Optional per-area map metadata overrides keyed by areaId.
             Each value may have: origin_x (float), origin_y (float), resolution (float m/px).
     """
 
     fleet_robot_id: str
+    name: str | None = None
     area_map_config: dict[str, dict] = {}
 
 

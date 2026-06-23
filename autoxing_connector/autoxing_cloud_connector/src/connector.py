@@ -106,9 +106,25 @@ class AutoxingCloudConnector(FleetConnector):
     # Execution loop
     # ------------------------------------------------------------------
 
+    def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
+        if robot_id in getattr(self, "_instrumented_sessions", set()):
+            return
+        if not hasattr(self, "_instrumented_sessions"):
+            self._instrumented_sessions: set[str] = set()
+        session = self._get_robot_session(robot_id)
+        robot_cfg = self._robot_configs.get(robot_id)
+        if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
+            session.robot_name = robot_cfg.name
+            session._send_robot_status(online=True)
+            self._logger.info(
+                "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
+            )
+        self._instrumented_sessions.add(robot_id)
+
     @override
     async def _execution_loop(self) -> None:
         for robot_id in self.robot_ids:
+            self._instrument_robot_session_if_needed(robot_id)
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: RobotState) -> None:
@@ -197,13 +213,29 @@ class AutoxingCloudConnector(FleetConnector):
         else:
             mission_state = "Executing"
 
+        start_ts = state.task_start_ts or int(time.time() * 1000)
+        mission_id = f"{state.task_id}_{start_ts}" if state.task_id else None
+        # Execution metrics from taskObj ride along in mission_tracking.data;
+        # InOrbit prefixes them with "data_" in kpis/objects, where the
+        # Deliverance mapper rebuilds them into the tasks.report.
+        data: dict = {"group": "Concesionario"}
+        if state.task_mileage is not None:
+            data["mileage"] = state.task_mileage
+        if state.task_total_dis is not None:
+            data["total_distance"] = state.task_total_dis
+        if state.task_duration is not None:
+            data["duration_s"] = state.task_duration
+        if state.task_target_name:
+            data["target_name"] = state.task_target_name
+        if state.task_type is not None:
+            data["task_type"] = state.task_type
         report: dict = {
-            "missionId": state.task_id,
+            "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
             "label": state.task_name or state.task_id,
-            "startTs": state.task_start_ts or int(time.time() * 1000),
-            "data": {},
+            "startTs": start_ts,
+            "data": data,
             "status": "OK",
             "tasks": [{"taskId": "0", "label": state.task_name or "Task"}],
             "completedPercent": 1.0 if finished else 0.0,

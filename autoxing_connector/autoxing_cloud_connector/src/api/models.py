@@ -48,6 +48,14 @@ class RobotState:
     task_is_finish: bool | None = None
     task_is_cancel: bool | None = None
     task_start_ts: int | None = None  # epoch ms
+    # Execution metrics from taskObj — captured while the task is active so the
+    # final mission_tracking carries them (AutoXing has no task-report endpoint;
+    # taskObj is gone once the task finishes).
+    task_mileage: float | None = None   # distance travelled so far (m)
+    task_total_dis: float | None = None  # total planned distance (m)
+    task_duration: int | None = None     # elapsed seconds
+    task_target_name: str | None = None  # destination point name
+    task_type: int | None = None         # AutoXing taskType code
 
     # Connectivity
     api_connected: bool = False
