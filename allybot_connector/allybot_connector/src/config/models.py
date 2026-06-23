@@ -20,9 +20,12 @@ class AllybotRobotConfig(RobotConfig):
         robot_id: InOrbit robot ID.
         fleet_robot_id: Allybot robot UUID — matches ``robotId`` in REST responses
             and ``serial`` in App WS ``device_position`` messages.
+        name: Display name shown in InOrbit Fleet Status. Optional; if set,
+            overrides the default robot_id that the framework publishes.
     """
 
     fleet_robot_id: str  # UUID string
+    name: str | None = None
 
 
 class AllybotConfig(BaseSettings):

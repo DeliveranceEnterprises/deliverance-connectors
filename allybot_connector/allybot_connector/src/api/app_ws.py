@@ -185,12 +185,23 @@ class AllybotAppWebSocket:
             except (TypeError, ValueError):
                 pass
 
-        # Parse inner msg for startTime
+        # Cleaned area so far (outer field, m²) — part of the partial report.
+        area = body.get("area")
+        if area is not None:
+            try:
+                state.cleaned_area = float(area)
+            except (TypeError, ValueError):
+                pass
+
+        # Parse inner msg for startTime and total plan area (workingScope).
         msg_str = body.get("msg", "")
         try:
             inner = json.loads(msg_str)
             if state.task_start_ts is None and inner.get("startTime"):
                 state.task_start_ts = int(inner["startTime"])
+            scope = inner.get("workingScope")
+            if scope is not None:
+                state.plan_area = float(scope)
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
@@ -227,6 +238,17 @@ class AllybotAppWebSocket:
                 pass
 
         state.work_status = data.get("work_status")
+
+        # Cleaning mode + area from the data.clean sub-object (null when idle).
+        clean = data.get("clean") or {}
+        if clean.get("task_mode"):
+            state.task_mode = clean["task_mode"]
+        if state.cleaned_area is None and clean.get("area") is not None:
+            try:
+                state.cleaned_area = float(clean["area"])
+            except (TypeError, ValueError):
+                pass
+
         have_task = data.get("haveTaskRunning")
         if have_task is not None:
             prev = state.have_task_running

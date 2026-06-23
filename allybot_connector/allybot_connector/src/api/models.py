@@ -60,6 +60,12 @@ class AllybotRobotState:
     task_percentage: float | None = None  # 0-100
     task_status_code: int | None = None  # 3=Starting, 5=Running, 9=Paused
     task_start_ts: int | None = None  # epoch ms
+    # Cleaning report (partial — built from the data the App WS exposes; the
+    # full manufacturer report with electric/water consumption + coverage image
+    # needs the robot's cleaning-report endpoint, which is not available here).
+    cleaned_area: float | None = None  # m² cleaned (devicestasktatus.area)
+    plan_area: float | None = None     # m² total plan (devicestasktatus.msg.workingScope)
+    task_mode: str | None = None       # cleaning mode (devicestatus.data.clean.task_mode)
 
     # Device status (from App WS devicestatus)
     battery: int | None = None  # 0-100

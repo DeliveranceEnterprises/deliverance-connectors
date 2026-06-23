@@ -153,9 +153,25 @@ class AllybotConnector(FleetConnector):
     # Execution loop
     # ------------------------------------------------------------------
 
+    def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
+        if robot_id in getattr(self, "_instrumented_sessions", set()):
+            return
+        if not hasattr(self, "_instrumented_sessions"):
+            self._instrumented_sessions: set[str] = set()
+        session = self._get_robot_session(robot_id)
+        robot_cfg = self._robot_configs.get(robot_id)
+        if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
+            session.robot_name = robot_cfg.name
+            session._send_robot_status(online=True)
+            self._logger.info(
+                "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
+            )
+        self._instrumented_sessions.add(robot_id)
+
     @override
     async def _execution_loop(self) -> None:
         for robot_id in self.robot_ids:
+            self._instrument_robot_session_if_needed(robot_id)
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: AllybotRobotState) -> None:
@@ -227,15 +243,38 @@ class AllybotConnector(FleetConnector):
     def _build_mission_report(self, state: AllybotRobotState) -> dict:
         mission_state = self._MISSION_STATE.get(state.task_status_code, "Completed")
         in_progress = state.have_task_running or False
+        # Partial cleaning report — only the fields the App WS exposes.  These
+        # ride along in mission_tracking.data and InOrbit prefixes them with
+        # "data_" in kpis/objects, where the Deliverance mapper rebuilds them
+        # into the cleaningStats report.  Electric/water consumption, effect and
+        # the coverage image need the robot's cleaning-report endpoint (TODO).
+        data: dict = {"group": "Cleaning"}
+        if state.plan_area is not None:
+            data["plan_area"] = state.plan_area
+        if state.cleaned_area is not None:
+            data["cleaned_area"] = state.cleaned_area
+        if state.task_percentage is not None:
+            data["progress_percent"] = state.task_percentage
+        if state.fresh_water is not None:
+            data["fresh_water"] = state.fresh_water
+        if state.sewage_water is not None:
+            data["sewage_water"] = state.sewage_water
+        if state.task_mode:
+            data["task_mode"] = state.task_mode
+        start_ts = state.task_start_ts or int(time.time() * 1000)
+        # Suffix with startTs so each cleaning run gets a unique missionId.
+        # Without this InOrbit deduplicates by missionId and overwrites the
+        # same 2 entries instead of creating a new one per run.
+        mission_id = f"{state.task_id}_{start_ts}" if state.task_id else None
         report: dict = {
-            "missionId": state.task_id,
+            "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
             "label": state.task_name or state.task_id,
-            "startTs": state.task_start_ts or int(time.time() * 1000),
-            "data": {},
+            "startTs": start_ts,
+            "data": data,
             "status": "OK",
-            "tasks": [{"taskId": "0", "label": state.task_name or "Cleaning"}],
+            "tasks": [{"taskId": "0", "label": "Cleaning"}],
             "completedPercent": (state.task_percentage or 0.0) / 100.0,
         }
         if in_progress:
