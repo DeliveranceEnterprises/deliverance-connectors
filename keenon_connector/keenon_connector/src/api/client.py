@@ -61,13 +61,35 @@ class KeenonAPIClient:
     ) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
+        self._api_domain = api_domain.rstrip("/")
+        self._verify_ssl = verify_ssl
+        self._timeout = timeout
         self._access_token: str | None = None
         self._token_expires_at: float = 0.0
-        self._http = httpx.AsyncClient(
-            base_url=api_domain.rstrip("/"),
-            verify=verify_ssl,
-            timeout=timeout,
+        self._consecutive_errors: int = 0
+        self._http = self._new_http_client()
+
+    def _new_http_client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            base_url=self._api_domain,
+            verify=self._verify_ssl,
+            timeout=self._timeout,
+            limits=httpx.Limits(
+                max_keepalive_connections=5,
+                max_connections=10,
+                keepalive_expiry=30.0,
+            ),
         )
+
+    async def _maybe_reset_client(self) -> None:
+        """Recreate the HTTP client after repeated errors to clear exhausted connections."""
+        self._consecutive_errors += 1
+        if self._consecutive_errors >= 3:
+            logger.warning("Recreating HTTP client after %d consecutive errors", self._consecutive_errors)
+            await self._http.aclose()
+            self._http = self._new_http_client()
+            self._access_token = None
+            self._consecutive_errors = 0
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -137,15 +159,33 @@ class KeenonAPIClient:
 
     @_retry()
     async def _get(self, path: str, **kwargs) -> dict | list | None:
-        return await self._request("GET", path, **kwargs)
+        try:
+            result = await self._request("GET", path, **kwargs)
+            self._consecutive_errors = 0
+            return result
+        except Exception:
+            await self._maybe_reset_client()
+            raise
 
     @_retry()
     async def _post(self, path: str, **kwargs) -> dict | list | None:
-        return await self._request("POST", path, **kwargs)
+        try:
+            result = await self._request("POST", path, **kwargs)
+            self._consecutive_errors = 0
+            return result
+        except Exception:
+            await self._maybe_reset_client()
+            raise
 
     @_retry()
     async def _delete(self, path: str, **kwargs) -> dict | list | None:
-        return await self._request("DELETE", path, **kwargs)
+        try:
+            result = await self._request("DELETE", path, **kwargs)
+            self._consecutive_errors = 0
+            return result
+        except Exception:
+            await self._maybe_reset_client()
+            raise
 
     # ------------------------------------------------------------------
     # Data endpoints
@@ -193,6 +233,23 @@ class KeenonAPIClient:
         """Return current status for an active call task."""
         return await self._get(
             "/api/open/scene/v1/robot/call/task", params={"taskNo": task_no}
+        )
+
+    async def get_task_info(self, task_no: str) -> dict | None:
+        """Return remote/local meal-delivery task detail by taskNo.
+
+        GET /api/open/scene/v1/robot/task/info — returns taskType, taskState
+        and subTaskInfoList[] with per-point taskDistance (metres).  Keyed by
+        taskNo, so no time-window search is needed.  (The API doc lists this as
+        POST but the server only accepts GET.)
+
+        This is the source of the per-task report (mileage/mode/destination).
+        The data-statistics endpoint /store/task/food/list was evaluated first
+        but only logs robot-initiated food-delivery rounds, not the remote
+        "call to point" tasks we dispatch — so it returns no records for them.
+        """
+        return await self._get(
+            "/api/open/scene/v1/robot/task/info", params={"taskNo": task_no}
         )
 
     async def get_map(

@@ -7,9 +7,14 @@
 # Standard
 import argparse
 import logging
+import os
 import signal
 import sys
+from pathlib import Path
 from typing import NoReturn
+
+# Third-party
+from dotenv import load_dotenv
 
 # InOrbit
 from inorbit_connector.utils import read_yaml
@@ -63,8 +68,21 @@ def start() -> None:
     args = parser.parse_args()
     config_filename = args.config
 
+    # Load .env and .env.local next to the YAML config (same pattern as TurtleBot connector).
+    config_dir = Path(config_filename).resolve().parent
+    loaded_env_files = []
+    for env_file in (config_dir / ".env", config_dir / ".env.local"):
+        if env_file.exists():
+            load_dotenv(env_file, override=False)
+            loaded_env_files.append(env_file)
+    if loaded_env_files:
+        LOGGER.info("Loaded environment file(s): %s", [str(f) for f in loaded_env_files])
+
     try:
         yaml_data = read_yaml(config_filename)
+        # api_key default is evaluated at import time (BaseModel, not BaseSettings).
+        # Re-read from env here so dotenv values are picked up correctly.
+        yaml_data.setdefault("api_key", os.getenv("INORBIT_API_KEY"))
         config = KeenonConnectorConfig(**yaml_data)
 
         robot_ids = [robot.robot_id for robot in config.fleet]

@@ -165,6 +165,11 @@ class RobotState:
     task_no: str | None = None
     task_status: int | None = None  # see TASK_STATUS_MAP
     task_start_ts: int | None = None  # ms timestamp when task was dispatched
+    task_name: str | None = None    # human-readable label (e.g. "Send to Mesa 1")
+    task_group: str | None = None   # action group (e.g. "Delivery", "Cleaning", "Hotel")
+    task_report: dict | None = None  # fetched from Keenon API after task completes
+    task_report_attempts: int = 0    # bounded retries for the report fetch
+    task_report_last_attempt: float = 0.0  # monotonic ts of last report fetch try
 
     # Cleaning-specific (populated only when robot_type == "clean")
     clean_main_state: int | None = None

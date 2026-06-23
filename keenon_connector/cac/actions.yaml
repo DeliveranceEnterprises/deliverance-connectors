@@ -32,6 +32,12 @@ spec:
     - name: scene_code
       type: string
       value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Send to Mesa 1"
+    - name: group
+      type: string
+      value: "Delivery"
 ---
 apiVersion: v0.1
 kind: ActionDefinition
@@ -59,6 +65,12 @@ spec:
     - name: scene_code
       type: string
       value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Send to Mesa 2"
+    - name: group
+      type: string
+      value: "Delivery"
 ---
 apiVersion: v0.1
 kind: ActionDefinition
@@ -86,6 +98,12 @@ spec:
     - name: scene_code
       type: string
       value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Send to Mesa 3"
+    - name: group
+      type: string
+      value: "Delivery"
 ---
 apiVersion: v0.1
 kind: ActionDefinition
