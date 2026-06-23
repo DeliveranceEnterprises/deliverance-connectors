@@ -24,6 +24,44 @@ Other relevant tags:
 - `TurtleBot Cleaning` → `kR4yZ9SrGPBnWiwi` (collection: Other — cleaning demo overlay)
 - `RS EU` → `hSTlpyR8qtgjSfcT` (collection: location — physical location in Espaitec)
 
+## Running connectors (local)
+
+Each connector runs via `uv run <entrypoint> --config config/my_fleet.local.yaml`.
+Credentials live in gitignored `config/.env` or `config/.env.local`
+(`*local*.yaml` and `.env*` are ignored — never commit them). Allybot/Autoxing
+need `--env-file config/.env.local`; Keenon reads `config/.env` automatically.
+
+Upstream robot APIs are flaky (AutoXing `/robot/v1.1/list` 500s; Keenon drops
+sessions). Run under the supervisor so a crash auto-restarts with backoff:
+
+```bash
+tools/supervise.sh autoxing_connector autoxing-cloud-connector --env-file config/.env.local
+tools/supervise.sh allybot_connector  allybot-connector       --env-file config/.env.local
+tools/supervise.sh keenon_connector   keenon-connector
+```
+
+The supervisor treats a SIGTERM/SIGINT (130/143) as a clean stop. A manual
+`pkill` of the child therefore stops the supervisor too — to restart by hand,
+kill the supervisor (`pkill -f "supervise.sh <name>"`) and relaunch.
+
+## Reports & mission_tracking (per connector)
+
+Connectors publish a `mission_tracking` key-value; fields under its `data` object
+are stored by InOrbit prefixed with `data_` and rebuilt into `tasks.report` by the
+backend mapper. Since no robot vendor here exposes a clean task-report endpoint,
+each connector captures metrics from live telemetry before the task ends:
+
+- **Keenon** — `GET scene/v1/robot/task/info` → `task_mileage`, `task_mode`,
+  `point_name`, `task_state`.
+- **Allybot** — App WS → `plan_area`, `cleaned_area`, `progress_percent`,
+  `fresh_water`, `sewage_water`, `task_mode` (→ nested `cleaningStats`).
+- **Autoxing** — robot state `taskObj` → `mileage`, `total_distance`,
+  `duration_s`, `target_name`. Captured while running; `taskObj` clears on finish.
+
+`missionId` MUST be unique per run (suffix with `startTs`). A constant missionId
+makes InOrbit dedupe and overwrite the previous mission instead of adding a new
+one. Set `data.group` so the mission is grouped (e.g. Autoxing → `Concesionario`).
+
 ## CAC apply pattern
 `inorbit apply -f -` does NOT read stdin. Always write to a temp file first:
 ```bash

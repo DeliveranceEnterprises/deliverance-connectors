@@ -38,11 +38,16 @@ environment, not as permission to affect real robots.
 
 ## 2. Current Branch / Workflow
 
-Current diagnostics work should happen on:
+Active branches (2026-06-23):
 
 ```bash
-feature/inorbit-robot-diagnostics
+feature/inorbit-connectors-reports   # autoxing/allybot/keenon report + supervisor work
+feature/turtlebot-inorbit-demo       # turtlebot demo only
 ```
+
+The two branches share the same base; the multi-connector report/supervisor work
+lives on `feature/inorbit-connectors-reports` (checked out by default so running
+connectors keep their fixes), turtlebot-only changes on the demo branch.
 
 Rules:
 
@@ -50,6 +55,18 @@ Rules:
 - Do not commit without explicit user confirmation.
 - Do not push without explicit user confirmation.
 - Before commit/push-related work, run `git branch --show-current` and `git status --short`.
+
+## 2b. Running connectors + reports
+
+- Run under `tools/supervise.sh <dir> <entrypoint> [--env-file config/.env.local]`
+  so flaky upstream APIs (AutoXing list 500s, Keenon session drops) auto-recover.
+  A manual `pkill` of the child also stops the supervisor (SIGTERM = clean stop).
+- Each connector publishes a `mission_tracking` key-value whose `data` fields the
+  backend turns into `tasks.report`. No vendor has a clean task-report endpoint,
+  so metrics are captured from live telemetry: Keenon `task/info`; Allybot App WS
+  (`cleaningStats`); Autoxing `taskObj` (`mileage`/`total_distance`/`duration_s`/
+  `target_name`). `missionId` MUST be unique per run (suffix `startTs`); set
+  `data.group` (Autoxing → `Concesionario`).
 
 ## 3. Safety Rules
 

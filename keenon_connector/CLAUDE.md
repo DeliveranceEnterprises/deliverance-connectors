@@ -50,6 +50,22 @@ attached and active. They appear in the Status widget but may show `0`/`--`
 when the module is not present. This is expected — leave the DataSources and
 Status entries in place for when the module is used.
 
+## Task report (from task/info)
+The report comes from `GET /api/open/scene/v1/robot/task/info?taskNo=` (the API
+doc says POST but the server only accepts GET). It returns `taskType` and
+`subTaskInfoList[].taskDistance`; the connector publishes `task_mileage`
+(Σ distances), `task_mode` (`taskType`), `point_name`, `task_state` in
+`mission_tracking.data` for the backend to fold into `tasks.report`. Fetch is
+retried with spacing (not 5 retries in 5 s).
+
+Do NOT use `GET /api/open/data/v1/store/task/food/list` for InOrbit-dispatched
+tasks — it returns `total=0` for remote "call to point" tasks (only logs
+robot-initiated food deliveries). Keenon allows ONE session per `client_id`: do
+not run a probe client while the connector is up (causes 401s + the connector's
+500 "connection prematurely closed"). The client now resets the HTTP session
+after repeated 500s to recover. `Available: false` while charging means the robot
+rejects remote tasks (`614920 无可用机器人`) — not a connector bug.
+
 ## CAC files
 `dashboard_navigation.yaml` is a full copy of `d-Navigation-Z8YZAb` including
 Allybot and Autoxing sections. Keep it in sync with the other connectors'
