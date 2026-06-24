@@ -60,3 +60,8 @@ class RobotState:
     # Connectivity
     api_connected: bool = False
     last_update: float = field(default_factory=time.time)
+
+    # Set to True after the first successful poll. Prevents the connector from
+    # publishing pose (0, 0) as an InOrbit SDK initialisation artefact before
+    # real coordinates arrive from the API.
+    has_data: bool = False

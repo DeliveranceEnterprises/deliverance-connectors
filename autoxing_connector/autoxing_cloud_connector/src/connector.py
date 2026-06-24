@@ -86,6 +86,9 @@ class AutoxingCloudConnector(FleetConnector):
             fleet_id_to_robot_id=self._fleet_id_to_robot_id,
             update_freq=self.config.update_freq,
         )
+        # Pre-populate state before the InOrbit session connects so the SDK
+        # never publishes a (0, 0) pose artefact on startup.
+        await self._data_poller.poll_once()
         self._data_poller.start()
         self._logger.info("Connected to AutoXing Cloud at %s", cfg.base_url)
 
@@ -128,6 +131,8 @@ class AutoxingCloudConnector(FleetConnector):
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: RobotState) -> None:
+        if not state.has_data:
+            return
         if state.x is not None and state.y is not None and state.yaw is not None:
             self.publish_robot_pose(
                 robot_id,

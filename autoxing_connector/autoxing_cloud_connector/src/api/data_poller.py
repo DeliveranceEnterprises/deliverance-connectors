@@ -37,6 +37,12 @@ class DataPoller:
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
 
+    async def poll_once(self) -> None:
+        """Run a single poll cycle synchronously. Call before start() to
+        pre-populate robot state so no (0, 0) pose artefact is published
+        when the InOrbit session first connects."""
+        await self._poll_once()
+
     def start(self) -> None:
         self._task = asyncio.create_task(self._run(), name="autoxing-poller")
 
@@ -92,6 +98,7 @@ class DataPoller:
             if raw:
                 self._apply_state(state, raw)
                 state.api_connected = True
+                state.has_data = True
                 # Per-robot state proves the robot is reachable; trust it for
                 # online even when the fleet list call failed.
                 if not list_entry:
