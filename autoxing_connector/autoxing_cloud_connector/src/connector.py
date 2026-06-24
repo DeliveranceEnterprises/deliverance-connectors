@@ -183,6 +183,16 @@ class AutoxingCloudConnector(FleetConnector):
 
         self.publish_robot_key_values(robot_id, **kv)
 
+        # Publish the terminal mission_tracking exactly once, then stop
+        # republishing it. InOrbit only finalises a mission into kpis/objects
+        # once it stops receiving updates — a mission re-sent every cycle never
+        # "settles", so the LAST task of a burst would otherwise stay unindexed
+        # until the next task starts. Clearing here lets it settle immediately.
+        if state.task_id and (state.task_is_finish or state.task_is_cancel):
+            state.task_id = None
+            state.task_name = None
+            state.task_start_ts = None
+
     _MISSION_STATE: dict[str, str] = {
         "executing": "Executing",
         "completed": "Completed",
@@ -218,7 +228,7 @@ class AutoxingCloudConnector(FleetConnector):
         # Execution metrics from taskObj ride along in mission_tracking.data;
         # InOrbit prefixes them with "data_" in kpis/objects, where the
         # Deliverance mapper rebuilds them into the tasks.report.
-        data: dict = {"group": "Concesionario"}
+        data: dict = {"group": "Delivery"}
         if state.task_mileage is not None:
             data["mileage"] = state.task_mileage
         if state.task_total_dis is not None:
