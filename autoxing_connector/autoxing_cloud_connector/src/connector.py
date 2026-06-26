@@ -183,7 +183,7 @@ class AutoxingCloudConnector(FleetConnector):
 
         kv["mission_status"] = self._compute_mission_status(state)
 
-        if state.task_id:
+        if state.task_id and state._task_ready:
             kv["mission_tracking"] = self._build_mission_report(state)
 
         self.publish_robot_key_values(robot_id, **kv)

@@ -86,6 +86,12 @@ class RobotState:
     # finished to avoid creating duplicate missions in InOrbit.
     _task_absent_polls: int = 0
 
+    # Set to True once task detail (target_name) has been fetched, or after
+    # 3 failed attempts. The connector skips mission_tracking until True so
+    # InOrbit never sees the UUID as the mission label.
+    _task_ready: bool = False
+    _task_detail_attempts: int = 0
+
     # Cache of task_id → task_start_ts (epoch ms) for the current session.
     # If the API sends a false isFinish=True and the same task_id reappears,
     # we reuse the original start_ts so the missionId stays identical and

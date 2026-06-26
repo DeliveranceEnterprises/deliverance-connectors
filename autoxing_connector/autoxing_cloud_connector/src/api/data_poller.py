@@ -139,8 +139,16 @@ class DataPoller:
                         if detail:
                             self._apply_task_detail(state, detail)
                             state.task_detail_fetched = state.task_id
+                            state._task_ready = True
+                        else:
+                            state._task_detail_attempts += 1
+                            if state._task_detail_attempts >= 3:
+                                state._task_ready = True
                     except Exception as exc:
                         logger.debug("Task detail fetch failed task=%s: %s", state.task_id, exc)
+                        state._task_detail_attempts += 1
+                        if state._task_detail_attempts >= 3:
+                            state._task_ready = True
             else:
                 state.api_connected = False
                 if not list_entry:
@@ -219,6 +227,8 @@ class DataPoller:
             state.task_duration = None
             state.task_target_name = None
             state.task_type = None
+            state._task_ready = False
+            state._task_detail_attempts = 0
             state.task_detail_fetched = None
             state.task_target_x = None
             state.task_target_y = None
