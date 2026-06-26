@@ -184,7 +184,7 @@ class AutoxingCloudConnector(FleetConnector):
         kv["mission_status"] = self._compute_mission_status(state)
 
         if state.task_id and state._task_ready:
-            kv["mission_tracking"] = self._build_mission_report(state)
+            kv["mission_tracking"] = self._build_mission_report(robot_id, state)
 
         self.publish_robot_key_values(robot_id, **kv)
 
@@ -217,7 +217,7 @@ class AutoxingCloudConnector(FleetConnector):
             return "Charging"
         return "Idle"
 
-    def _build_mission_report(self, state: RobotState) -> dict:
+    def _build_mission_report(self, robot_id: str, state: RobotState) -> dict:
         finished = bool(state.task_is_finish)
         canceled = bool(state.task_is_cancel)
         in_progress = not finished and not canceled
@@ -229,7 +229,10 @@ class AutoxingCloudConnector(FleetConnector):
             mission_state = "Executing"
 
         start_ts = state.task_start_ts or int(time.time() * 1000)
-        mission_id = f"{state.task_id}_{start_ts}" if state.task_id else None
+        # Autoxing task IDs are UUIDs — globally unique per task, never reused.
+        # Using task_id alone as missionId makes it stable regardless of when
+        # the connector detects the task (no timing-dependent suffix).
+        mission_id = f"{robot_id}-{state.task_id}" if state.task_id else None
         # Execution metrics from taskObj ride along in mission_tracking.data;
         # InOrbit prefixes them with "data_" in kpis/objects, where the
         # Deliverance mapper rebuilds them into the tasks.report.
