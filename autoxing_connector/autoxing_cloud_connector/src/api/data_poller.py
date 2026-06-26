@@ -5,13 +5,33 @@
 """Background polling loop for AutoXing robot state."""
 
 import asyncio
+import json
 import logging
+import os
 import time
 
 from .client import AutoxingAPIClient
 from .models import RobotState
 
 logger = logging.getLogger(__name__)
+
+_CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "task_start_ts_cache.json")
+
+
+def _load_ts_cache() -> dict[str, int]:
+    try:
+        with open(_CACHE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_ts_cache(cache: dict[str, int]) -> None:
+    try:
+        with open(_CACHE_FILE, "w") as f:
+            json.dump(cache, f)
+    except Exception as exc:
+        logger.debug("Could not save task_start_ts cache: %s", exc)
 
 
 class DataPoller:
@@ -36,6 +56,12 @@ class DataPoller:
         self._poll_interval = 1.0 / update_freq if update_freq > 0 else 1.0
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
+        # Persistent cache: task_id → start_ts (epoch ms). Survives restarts so
+        # the same task always gets the same missionId in InOrbit.
+        self._ts_cache: dict[str, int] = _load_ts_cache()
+        # Pre-populate each robot's in-memory cache from disk.
+        for state in robot_states.values():
+            state._task_start_ts_cache = dict(self._ts_cache)
 
     async def poll_once(self) -> None:
         """Run a single poll cycle synchronously. Call before start() to
@@ -172,15 +198,18 @@ class DataPoller:
 
         if task_id and task_id != state.task_id:
             # New task_id (or same task_id reappearing after a false terminal).
-            # Reuse the cached start_ts if we have one so InOrbit sees the same
-            # missionId and treats it as an update rather than a new mission.
-            # Only clear the cache for task_ids that are genuinely different.
+            # Reuse the cached start_ts (loaded from disk on startup) so the
+            # missionId is stable across connector restarts.
+            # Only evict the old task_id from cache when a genuinely new one arrives.
             if state.task_id and state.task_id != task_id:
                 state._task_start_ts_cache.pop(state.task_id, None)
+                self._ts_cache.pop(state.task_id, None)
             state._task_absent_polls = 0
             state.task_id = task_id
             if task_id not in state._task_start_ts_cache:
                 state._task_start_ts_cache[task_id] = int(time.time() * 1000)
+                self._ts_cache[task_id] = state._task_start_ts_cache[task_id]
+                _save_ts_cache(self._ts_cache)
             state.task_start_ts = state._task_start_ts_cache[task_id]
             state.task_is_finish = False
             state.task_is_cancel = False

@@ -269,7 +269,7 @@ class AutoxingCloudConnector(FleetConnector):
             "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
-            "label": state.task_name or state.task_id,
+            "label": state.task_target_name or state.task_name or state.task_id,
             "startTs": start_ts,
             "data": data,
             "status": "OK",
