@@ -65,3 +65,17 @@ class RobotState:
     # publishing pose (0, 0) as an InOrbit SDK initialisation artefact before
     # real coordinates arrive from the API.
     has_data: bool = False
+
+    # Grace period counter: number of consecutive polls where taskObj was absent
+    # while a task_id was active. The Autoxing API sometimes drops taskObj for
+    # 1-2 cycles mid-task (especially when a second client polls the same API
+    # simultaneously). We wait TASK_ABSENT_GRACE polls before declaring the task
+    # finished to avoid creating duplicate missions in InOrbit.
+    _task_absent_polls: int = 0
+
+    # Cache of task_id → task_start_ts (epoch ms) for the current session.
+    # If the API sends a false isFinish=True and the same task_id reappears,
+    # we reuse the original start_ts so the missionId stays identical and
+    # InOrbit treats it as an update to the same mission rather than a new one.
+    # Cleared only when a genuinely different task_id appears.
+    _task_start_ts_cache: dict = field(default_factory=dict)

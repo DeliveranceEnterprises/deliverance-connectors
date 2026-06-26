@@ -152,10 +152,24 @@ class DataPoller:
 
         task_obj = raw.get("taskObj") or {}
         task_id = task_obj.get("taskId")
+
+        # Grace period: Autoxing API drops taskObj for 1-2 cycles mid-task.
+        # Wait 3 consecutive absent polls before declaring the task finished to
+        # avoid creating duplicate missions in InOrbit.
+        _TASK_ABSENT_GRACE = 3
+
         if task_id and task_id != state.task_id:
-            # New task started
+            # New task_id (or same task_id reappearing after a false terminal).
+            # Reuse the cached start_ts if we have one so InOrbit sees the same
+            # missionId and treats it as an update rather than a new mission.
+            # Only clear the cache for task_ids that are genuinely different.
+            if state.task_id and state.task_id != task_id:
+                state._task_start_ts_cache.pop(state.task_id, None)
+            state._task_absent_polls = 0
             state.task_id = task_id
-            state.task_start_ts = int(time.time() * 1000)
+            if task_id not in state._task_start_ts_cache:
+                state._task_start_ts_cache[task_id] = int(time.time() * 1000)
+            state.task_start_ts = state._task_start_ts_cache[task_id]
             state.task_is_finish = False
             state.task_is_cancel = False
             # Reset execution metrics for the new task.
@@ -165,12 +179,16 @@ class DataPoller:
             state.task_target_name = None
             state.task_type = None
         elif task_id:
+            state._task_absent_polls = 0
             state.task_is_finish = task_obj.get("isFinish", False)
             state.task_is_cancel = task_obj.get("isCancel", False)
         elif not task_id and state.task_id:
-            # Task cleared by robot
-            state.task_is_finish = True
-            # Keep task_id so connector can publish final mission_tracking
+            state._task_absent_polls += 1
+            if state._task_absent_polls >= _TASK_ABSENT_GRACE:
+                # Task cleared by robot after grace period
+                state.task_is_finish = True
+                state._task_absent_polls = 0
+                # Keep task_id so connector can publish final mission_tracking
 
         # Capture execution metrics while the task is active.  taskObj vanishes
         # once the task ends, so these are the only source for the report.
