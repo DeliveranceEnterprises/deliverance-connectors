@@ -203,7 +203,7 @@ class DataPoller:
             if duration is not None:
                 state.task_duration = int(duration)
             target = task_obj.get("target") or {}
-            if target.get("name"):
+            if target.get("name") and state.task_target_name is None:
                 state.task_target_name = target["name"]
             if task_obj.get("taskType") is not None:
                 state.task_type = task_obj.get("taskType")
