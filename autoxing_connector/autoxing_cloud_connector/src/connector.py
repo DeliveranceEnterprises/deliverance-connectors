@@ -240,10 +240,31 @@ class AutoxingCloudConnector(FleetConnector):
             data["total_distance"] = state.task_total_dis
         if state.task_duration is not None:
             data["duration_s"] = state.task_duration
-        if state.task_target_name:
-            data["target_name"] = state.task_target_name
         if state.task_type is not None:
             data["task_type"] = state.task_type
+        if state.task_id:
+            data["autoxing_task_id"] = state.task_id
+        # Route fields from task detail (GET /task/v1.1/{taskId})
+        if state.task_target_name:
+            data["target_name"] = state.task_target_name
+        if state.task_target_x is not None:
+            data["target_x"] = state.task_target_x
+        if state.task_target_y is not None:
+            data["target_y"] = state.task_target_y
+        if state.task_back_name:
+            data["back_name"] = state.task_back_name
+        if state.task_back_x is not None:
+            data["back_x"] = state.task_back_x
+        if state.task_back_y is not None:
+            data["back_y"] = state.task_back_y
+        if state.task_origin_x is not None:
+            data["origin_x"] = state.task_origin_x
+        if state.task_origin_y is not None:
+            data["origin_y"] = state.task_origin_y
+        if state.task_area_id:
+            data["area_id"] = state.task_area_id
+        if state.task_building_id:
+            data["building_id"] = state.task_building_id
         report: dict = {
             "missionId": mission_id,
             "inProgress": in_progress,

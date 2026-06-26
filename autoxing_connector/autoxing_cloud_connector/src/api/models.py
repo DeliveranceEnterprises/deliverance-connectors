@@ -54,8 +54,21 @@ class RobotState:
     task_mileage: float | None = None   # distance travelled so far (m)
     task_total_dis: float | None = None  # total planned distance (m)
     task_duration: int | None = None     # elapsed seconds
-    task_target_name: str | None = None  # destination point name
+    task_target_name: str | None = None  # real destination (taskPts[0].ext.name)
     task_type: int | None = None         # AutoXing taskType code
+    # Task detail fields — fetched once per task from GET /task/v1.1/{taskId}.
+    # taskObj.target is the RETURN point, not the destination; the real
+    # destination lives in taskPts. These mirror the direct integration report.
+    task_detail_fetched: str | None = None  # task_id for which detail was fetched
+    task_target_x: float | None = None
+    task_target_y: float | None = None
+    task_back_name: str | None = None   # return point name (backPt.ext.name)
+    task_back_x: float | None = None
+    task_back_y: float | None = None
+    task_origin_x: float | None = None  # robot position at task start (curPt)
+    task_origin_y: float | None = None
+    task_area_id: str | None = None
+    task_building_id: str | None = None
 
     # Connectivity
     api_connected: bool = False

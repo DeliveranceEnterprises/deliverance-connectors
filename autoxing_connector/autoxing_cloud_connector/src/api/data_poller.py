@@ -103,6 +103,18 @@ class DataPoller:
                 # online even when the fleet list call failed.
                 if not list_entry:
                     state.online = True
+                # Fetch full task detail once per task to get the real
+                # destination (taskPts), return point (backPt) and origin
+                # (curPt). taskObj.target is the RETURN point, not the
+                # destination, so we need the detail endpoint.
+                if state.task_id and state.task_detail_fetched != state.task_id:
+                    try:
+                        detail = await self._client.get_task(state.task_id)
+                        if detail:
+                            self._apply_task_detail(state, detail)
+                            state.task_detail_fetched = state.task_id
+                    except Exception as exc:
+                        logger.debug("Task detail fetch failed task=%s: %s", state.task_id, exc)
             else:
                 state.api_connected = False
                 if not list_entry:
@@ -172,12 +184,22 @@ class DataPoller:
             state.task_start_ts = state._task_start_ts_cache[task_id]
             state.task_is_finish = False
             state.task_is_cancel = False
-            # Reset execution metrics for the new task.
+            # Reset execution metrics and detail fields for the new task.
             state.task_mileage = None
             state.task_total_dis = None
             state.task_duration = None
             state.task_target_name = None
             state.task_type = None
+            state.task_detail_fetched = None
+            state.task_target_x = None
+            state.task_target_y = None
+            state.task_back_name = None
+            state.task_back_x = None
+            state.task_back_y = None
+            state.task_origin_x = None
+            state.task_origin_y = None
+            state.task_area_id = None
+            state.task_building_id = None
         elif task_id:
             state._task_absent_polls = 0
             state.task_is_finish = task_obj.get("isFinish", False)
@@ -202,8 +224,46 @@ class DataPoller:
             duration = task_obj.get("duration")
             if duration is not None:
                 state.task_duration = int(duration)
-            target = task_obj.get("target") or {}
-            if target.get("name") and state.task_target_name is None:
-                state.task_target_name = target["name"]
+            # taskObj.target is the RETURN point, not the destination.
+            # task_target_name is populated by _apply_task_detail instead.
             if task_obj.get("taskType") is not None:
                 state.task_type = task_obj.get("taskType")
+
+    def _apply_task_detail(self, state: RobotState, detail: dict) -> None:
+        """Populate route fields from GET /task/v1.1/{taskId} response.
+
+        taskPts[0] = real destination; backPt = return point; curPt = origin.
+        """
+        def _f(val):
+            try:
+                return float(val) if val is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        pts = detail.get("taskPts") or []
+        for pt in pts:
+            name = (pt.get("ext") or {}).get("name")
+            if name:
+                state.task_target_name = name
+                state.task_target_x = _f(pt.get("x"))
+                state.task_target_y = _f(pt.get("y"))
+                state.task_area_id = pt.get("areaId")
+                break
+
+        back = detail.get("backPt") or {}
+        back_name = (back.get("ext") or {}).get("name")
+        if back_name:
+            state.task_back_name = back_name
+            state.task_back_x = _f(back.get("x"))
+            state.task_back_y = _f(back.get("y"))
+
+        cur = detail.get("curPt") or {}
+        ox = _f(cur.get("x"))
+        oy = _f(cur.get("y"))
+        if ox is not None:
+            state.task_origin_x = ox
+        if oy is not None:
+            state.task_origin_y = oy
+
+        if detail.get("buildingId"):
+            state.task_building_id = detail["buildingId"]
