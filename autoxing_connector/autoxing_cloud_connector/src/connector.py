@@ -230,32 +230,30 @@ class AutoxingCloudConnector(FleetConnector):
 
         start_ts = state.task_start_ts or int(time.time() * 1000)
         # Autoxing task IDs are UUIDs — globally unique per task, never reused.
-        # Using task_id alone as missionId makes it stable regardless of when
-        # the connector detects the task (no timing-dependent suffix).
-        mission_id = f"{robot_id}-{state.task_id}" if state.task_id else None
+        # InOrbit's kpis/objects prefixes the entityId (robotId) to the missionId
+        # automatically, so publishing just the UUID avoids a double-prefix in the
+        # stored id ("autoxing-chassis-1-autoxing-chassis-1-...").
+        mission_id = state.task_id if state.task_id else None
         # Execution metrics from taskObj ride along in mission_tracking.data;
         # InOrbit prefixes them with "data_" in kpis/objects, where the
         # Deliverance mapper rebuilds them into the tasks.report.
         data: dict = {"group": "Delivery"}
+        if state.task_id:
+            data["autoxing_task_id"] = state.task_id
+        if state.task_target_name:
+            data["target_name"] = state.task_target_name
+        if state.task_back_name:
+            data["back_name"] = state.task_back_name
         if state.task_mileage is not None:
             data["mileage"] = state.task_mileage
         if state.task_total_dis is not None:
             data["total_distance"] = state.task_total_dis
         if state.task_duration is not None:
             data["duration_s"] = state.task_duration
-        if state.task_type is not None:
-            data["task_type"] = state.task_type
-        if state.task_id:
-            data["autoxing_task_id"] = state.task_id
-        # Route fields from task detail (GET /task/v1.1/{taskId})
-        if state.task_target_name:
-            data["target_name"] = state.task_target_name
         if state.task_target_x is not None:
             data["target_x"] = state.task_target_x
         if state.task_target_y is not None:
             data["target_y"] = state.task_target_y
-        if state.task_back_name:
-            data["back_name"] = state.task_back_name
         if state.task_back_x is not None:
             data["back_x"] = state.task_back_x
         if state.task_back_y is not None:
@@ -268,6 +266,8 @@ class AutoxingCloudConnector(FleetConnector):
             data["area_id"] = state.task_area_id
         if state.task_building_id:
             data["building_id"] = state.task_building_id
+        if state.task_type is not None:
+            data["task_type"] = state.task_type
         report: dict = {
             "missionId": mission_id,
             "inProgress": in_progress,
