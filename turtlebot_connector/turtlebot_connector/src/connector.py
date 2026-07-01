@@ -37,7 +37,7 @@ from turtlebot_connector.src.backends.ros2_gazebo import (
 )
 from turtlebot_connector.src.backends.ros2_camera import Ros2ImageTopicCamera
 from turtlebot_connector.src.commands import CancelTaskCommand, CustomScripts, DispatchCommand, GoToCommand
-from turtlebot_connector.src.config.models import TurtlebotBackendType, TurtlebotConnectorConfig
+from turtlebot_connector.src.config.models import TurtlebotBackendType, TurtlebotConnectorConfig, TurtlebotRobotConfig
 from turtlebot_connector.src.simulator import FakeTurtlebotSimulator
 
 
@@ -47,6 +47,7 @@ class TurtlebotConnector(FleetConnector):
     def __init__(self, config: TurtlebotConnectorConfig) -> None:
         super().__init__(config, publish_connector_system_stats=True)
         self._backends: dict[str, TurtlebotBackend] = {}
+        self._robot_configs: dict[str, TurtlebotRobotConfig] = {}
         self._registered_ros_cameras: set[str] = set()
         self._instrumented_sessions: set[str] = set()
         # Track the last Open Teleop goal we sent so consecutive clicks
@@ -55,6 +56,7 @@ class TurtlebotConnector(FleetConnector):
         self._open_teleop_last_goal: dict[str, tuple[float, float, float, float]] = {}
         for robot in config.fleet:
             self._backends[robot.robot_id] = self._build_backend(robot)
+            self._robot_configs[robot.robot_id] = robot
         self._last_tick = time.monotonic()
 
     def _build_backend(self, robot) -> TurtlebotBackend:
@@ -376,10 +378,12 @@ class TurtlebotConnector(FleetConnector):
         )
         self.publish_robot_odometry(robot_id, linear_speed=state.speed)
 
+        robot_cfg = self._robot_configs.get(robot_id)
         kv: dict = {
             "connector_version": connector_version,
             "provider": state.provider_name,
             "robot_name": state.name,
+            "robot_model": robot_cfg.robot_model if robot_cfg else "TurtleBot3 Waffle Pi",
             "online_status": state.online,
             "operational_state": state.operational_state.value,
             "battery": state.battery,

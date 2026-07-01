@@ -186,9 +186,11 @@ class AllybotConnector(FleetConnector):
             if state.speed is not None:
                 self.publish_robot_odometry(robot_id, linear_speed=state.speed)
 
+        robot_cfg = self._robot_configs.get(robot_id)
         kv: dict = {
             "connector_version": connector_version,
             "ws_connected": state.ws_connected,
+            "robot_model": robot_cfg.robot_model if robot_cfg else "Allybot-C2",
         }
 
         if state.speed is not None:

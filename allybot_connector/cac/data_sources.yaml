@@ -216,3 +216,15 @@ spec:
       key: sewage_water
   timeline:
     fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-robot-model
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}

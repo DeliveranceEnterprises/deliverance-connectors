@@ -68,3 +68,15 @@ spec:
     keyValue:
       key: mission_status
   timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-robot-model
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}

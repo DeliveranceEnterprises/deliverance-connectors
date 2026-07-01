@@ -26,6 +26,7 @@ class AllybotRobotConfig(RobotConfig):
 
     fleet_robot_id: str  # UUID string
     name: str | None = None
+    robot_model: str = "Allybot-C2"
 
 
 class AllybotConfig(BaseSettings):
