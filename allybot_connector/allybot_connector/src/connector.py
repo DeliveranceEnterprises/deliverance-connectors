@@ -190,7 +190,7 @@ class AllybotConnector(FleetConnector):
         kv: dict = {
             "connector_version": connector_version,
             "ws_connected": state.ws_connected,
-            "robot_model": robot_cfg.robot_model if robot_cfg else "Allybot-C2",
+            "robot_model": robot_cfg.robot_model if robot_cfg else "C2",
         }
 
         if state.speed is not None:

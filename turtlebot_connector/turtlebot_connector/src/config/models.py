@@ -95,7 +95,7 @@ class TurtlebotRobotConfig(RobotConfig):
     """Per-robot configuration for the fake TurtleBot simulator."""
 
     name: str = "TurtleBot Demo"
-    robot_model: str = "TurtleBot3 Waffle Pi"
+    robot_model: str = "Waffle Pi"
     online: bool = True
     initial_pose: PoseConfig = Field(default_factory=PoseConfig)
     initial_battery: float = Field(default=0.95, ge=0.0, le=1.0)

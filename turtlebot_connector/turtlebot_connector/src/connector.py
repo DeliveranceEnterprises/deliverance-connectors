@@ -383,7 +383,7 @@ class TurtlebotConnector(FleetConnector):
             "connector_version": connector_version,
             "provider": state.provider_name,
             "robot_name": state.name,
-            "robot_model": robot_cfg.robot_model if robot_cfg else "TurtleBot3 Waffle Pi",
+            "robot_model": robot_cfg.robot_model if robot_cfg else "Waffle Pi",
             "online_status": state.online,
             "operational_state": state.operational_state.value,
             "battery": state.battery,
