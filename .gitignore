@@ -4,3 +4,6 @@ __pycache__/
 *.py[cod]
 *.log
 *.log.*
+
+# Runtime cache (per-task start timestamps) — regenerated at runtime
+task_start_ts_cache.json
