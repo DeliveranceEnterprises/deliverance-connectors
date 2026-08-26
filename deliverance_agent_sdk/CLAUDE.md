@@ -115,14 +115,49 @@ path carries the same real data as the InOrbit path did.
   way `map_name` exists in Siruiy's own vendor API — `scene.name` is left `null` on
   purpose rather than guessing or hardcoding one.
 
+## Confirmed with a SECOND, genuinely different robot (2026-08-26, same day)
+
+`deliverance_agent_node_ros2.py` — a straight rclpy port, same
+`_upsert_device`/`_upsert_device_status` logic byte-for-byte, only the ROS API
+differs — validated live against `turtlebot_robot_sdk`'s real Gazebo+Nav2
+simulation (`turtlebot-robot-sdk-vnc` container). This is the strongest
+evidence so far that this is genuinely robot-agnostic, not secretly
+WDC-shaped: different ROS major version (ROS2 Humble vs. WDC's ROS1 Noetic),
+different robot entirely, same unmodified business logic.
+
+One real bug hit and fixed on the way: TurtleBot's `/scan` (Gazebo's own
+lidar plugin) publishes `BEST_EFFORT`/`VOLATILE` QoS; `rclpy`'s default
+subscription QoS is `RELIABLE`, which is incompatible and silently receives
+nothing -- no error, just a permanently empty topic, the same family of
+"quiet gap" this workspace already hit once with `turtlebot_robot_sdk`'s own
+map-QoS bug. Fixed by matching the publisher's QoS explicitly in
+`create_subscription`.
+
+Verified in the platform DB, a separate device row from `wdc-agent-sdk-test`:
+
+```
+name            | turtlebot-agent-sdk-test
+category        | robot
+enabled         | f
+status          | idle
+scene           | {"coordinates_x": -2.0184, "coordinates_y": -0.4542, ...}
+last_connection | 2026-08-26 14:55:12   -- real Nav2/AMCL pose, matches the
+                                           seeded start pose documented in
+                                           turtlebot_robot_sdk/CLAUDE.md
+```
+
+Battery is reported honestly as `0` here, not faked -- TurtleBot's Gazebo
+simulation has no battery topic either (same known gap `turtlebot_connector`'s
+Edge SDK backend works around by faking one; this generic node has no
+robot-specific channel to read a fake value from, so it doesn't invent one).
+
 ## Open questions / next steps
 
 - [ ] Decide DB-direct vs. REST-API-in-front before this is ever given to the hardware
       partner (see above) — this is the single biggest remaining design decision, and
       it's Eduardo's/Carlos's call, not something to default silently.
-- [ ] Validate against a SECOND robot (not just WDC) to actually prove the
-      robot-agnostic claim — everything above is reasoned from first principles, not
-      yet tested against a second real ROS1 source.
+- [x] Validate against a SECOND robot — done, see above (TurtleBot, ROS2, real
+      Gazebo+Nav2, same day).
 - [ ] `enabled=False` on insert (workspace convention) means `wdc-agent-sdk-test` won't
       show up on the dashboard until enabled by hand from "Enable Devices for
       Deliverance" — same as every other connector's first-sync device.

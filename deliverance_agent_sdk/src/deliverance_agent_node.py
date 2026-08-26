@@ -201,6 +201,7 @@ class DeliveranceAgentNode:
 
     def _on_scan(self, _msg: LaserScan) -> None:
         self._last_scan_ts = time.time()
+        rospy.loginfo_throttle(5, "DEBUG _on_scan fired, last_scan_ts=%s", self._last_scan_ts)
 
     def _on_battery(self, msg: BatteryState) -> None:
         # percentage is 0-1 per the sensor_msgs/BatteryState convention.
