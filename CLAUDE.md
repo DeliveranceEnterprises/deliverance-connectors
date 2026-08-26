@@ -1,20 +1,39 @@
 # Deliverance Connectors — Context for Claude
 
 ## Repo overview
-Monorepo of InOrbit Edge SDK connectors for multiple robot types. Each connector
-is a Python package under its own directory. All connectors share the same
-InOrbit account and follow the same CAC patterns.
+Monorepo of InOrbit connectors for multiple robot types. Historically all **Edge SDK**
+(each connector is a Python package under its own directory, running as an intermediary
+process talking to InOrbit cloud on the robot's behalf). As of 2026-07-27 this repo also
+hosts one **Robot SDK** experiment (`turtlebot_robot_sdk/`, agent installed on/near the
+robot) — see "SDK patterns in this repo" below before assuming everything here is Edge
+SDK. All connectors share the same InOrbit account and follow the same CAC patterns.
 
 ## InOrbit account
 - Account ID: `rnLasGAxn5CP7bj32` (Deliverance Enterprises)
 - CLI API key: `~/INORBIT/.env-inorbit` → `INORBIT_CLI_API_KEY`
 - Always `source /home/carlos-fernandez/INORBIT/.env-inorbit` before CLI commands
 
+## SDK patterns in this repo
+
+- **Edge SDK** (`turtlebot_connector/`, `allybot_connector/`, `autoxing_connector/`,
+  `keenon_connector/`): our Python process runs the `inorbit-edge` MQTT session and
+  talks to InOrbit cloud on the robot's behalf. This is the right pattern whenever we
+  only have a vendor cloud REST API (Autoxing, Keenon, Allybot) — there's no local
+  robot to install anything on.
+- **Robot SDK** (`turtlebot_robot_sdk/`): InOrbit's own Agent Core is installed
+  directly on/near the robot; ROS topics get mapped to InOrbit either via
+  auto-detection (pose/map/camera) or the config-only **republisher** (custom data).
+  Only makes sense where we have local/onboard access to the robot — currently just
+  the TurtleBot (ROS2 sim). Exploratory as of 2026-07-27, see that directory's
+  `CLAUDE.md` for status. Not a replacement for `turtlebot_connector/`, which stays
+  as-is.
+
 ## Connectors in this repo
 
 | Directory | Robot | Tag | Tag ID | SDK version |
 |---|---|---|---|---|
 | `turtlebot_connector/` | TurtleBot3 waffle_pi (Gazebo sim) | TurtleBot | `QJoR03aXlEhZkD6N` | `2.1.0.edgesdk_py` |
+| `turtlebot_robot_sdk/` | TurtleBot3 waffle_pi (Gazebo sim) — Robot SDK experiment | TurtleBot | `QJoR03aXlEhZkD6N` | Robot SDK (C++, exploratory) |
 | `allybot_connector/` | Allybot cleaning robot | Allybot | `StdZGa32GmBLReFr` | `2.0.1.edgesdk_py` |
 | `autoxing_connector/` | Autoxing delivery chassis | Autoxing | `8gMbOLofiZYK0uKx` | `2.0.1.edgesdk_py` |
 | `keenon_connector/` | Keenon T10 service robot | Keenon | `DJbJhivzeMvXDj8z` | `2.0.1.edgesdk_py` |

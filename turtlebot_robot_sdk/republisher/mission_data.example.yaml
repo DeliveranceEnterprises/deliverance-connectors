@@ -1,0 +1,42 @@
+# Illustrative republisher config, NOT validated against a live robot yet.
+# Adapted from InOrbit's own docs example (ROS1 `inorbit_republisher` pattern) to the
+# shape of key-values our Edge SDK turtlebot_connector already publishes
+# (see ../../turtlebot_connector/turtlebot_connector/src/connector.py:392-402).
+#
+# IMPORTANT gap: unlike the Edge SDK connector (which computes these fields in Python
+# and calls publish_key_values() directly), the republisher can only read data that
+# already exists as a ROS topic. There is no such topic today — a small ROS2 node
+# publishing mission state (custom_waypoint, mission_status, mission_tracking JSON)
+# would need to be written first. This file only documents the *mapping* shape once
+# that topic exists; it does not replace the need for that publisher node.
+#
+# Launch (ROS1 reference syntax — confirm ROS2 equivalent before using):
+#   roslaunch inorbit_republisher example.launch config:=mission_data.example.yaml
+
+republishers:
+  - topic: "/turtlebot/mission_state"          # placeholder: does not exist yet
+    msg_type: "turtlebot_msgs/MissionState"    # placeholder custom msg type
+    mappings:
+      - field: "current_waypoint"
+        out:
+          topic: "/inorbit/custom_data/0"
+          key: "current_waypoint"
+
+      - field: "mission_status"
+        out:
+          topic: "/inorbit/custom_data/0"
+          key: "mission_status"
+
+      - field: "task_label"
+        out:
+          topic: "/inorbit/custom_data/0"
+          key: "task_label"
+
+      # mission_tracking is a nested JSON blob in the Edge SDK version
+      # (state/data.waypoint/completedPercent/endTs) — use json_of_fields (or
+      # `serialize`, whichever the ROS2 republisher supports) once confirmed.
+      - field: "mission_tracking"
+        mapping_type: "serialize"
+        out:
+          topic: "/inorbit/custom_data/0"
+          key: "mission_tracking"
