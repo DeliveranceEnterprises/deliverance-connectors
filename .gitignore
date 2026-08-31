@@ -7,3 +7,22 @@ __pycache__/
 
 # Runtime cache (per-task start timestamps) — regenerated at runtime
 task_start_ts_cache.json
+
+# Binarios de terceros: APKs del fabricante y de Termux, SDK propietario.
+# Son descargables de su origen oficial y pesan cientos de MB.
+*.apk
+*.zip
+*.7z
+*.aar
+
+# Instalador de InOrbit: se descarga con la clave privada de la cuenta,
+# no se versiona (ver README de wdc_robot_sdk).
+wdc_robot_sdk/vpn_setup/inorbit_installer.sh
+
+# Documentos generados (informes en PDF) y documentación de terceros
+*.pdf
+
+# Capturas y material de trabajo
+wdc_robot_sdk/**/*.png
+wdc_robot_sdk/**/*.jpg
+!wdc_robot_sdk/src/espaitec1_map.jpg

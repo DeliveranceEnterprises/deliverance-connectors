@@ -1,0 +1,177 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects -- WDC (Agent SDK, robot 223623373)
+# Account: Deliverance (rnLasGAxn5CP7bj32)
+#
+# Unlike the Edge SDK connectors in this repo (Keenon, Allybot, Autoxing --
+# type: RunScript, InOrbit calls back into the connector process), this
+# robot's Agent Core runs ON the robot itself and reads real ROS topics, so
+# actions use type: PublishToTopic instead -- InOrbit's CustomCommandsAgentlet
+# publishes the given string to the ROS topic "inorbit/custom_command"
+# (confirmed live 2026-08-28 against the agent's own shipped source, see
+# CLAUDE.md), and src/wdc_bridge_node.py's _on_custom_command() subscribes to
+# it and dispatches to the WDC local API.
+#
+# Scoped to the robot directly (robot/rnLasGAxn5CP7bj32/223623373), not a
+# tag -- WDC has no dedicated hardware tag like Keenon/Allybot/Autoxing do,
+# it only carries the generic "Robot" and "RS EU" tags.
+#
+# Point-to-point navigation (the A/B/C/D/E buttons + Home on the robot's
+# own tablet UI) now included -- real coordinates pulled directly off the
+# tablet's own manufacturer-app storage (`DCStorage` sqlite db, key
+# "pointPosition"/"regular"), not guessed. See wdc_bridge_node.py's
+# NAMED_POINTS dict for the exact values and how they were obtained.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-stop
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: Stop
+  group: Navigation
+  description: Stops the robot's current motion immediately.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "STOP"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-charge
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: Go Charge
+  group: Navigation
+  description: Sends the robot back to its charging dock.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "CHARGE"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-a
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Point A"
+  group: Navigation
+  description: Sends the robot to delivery point A.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_A"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-b
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Point B"
+  group: Navigation
+  description: Sends the robot to delivery point B.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_B"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-c
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Point C"
+  group: Navigation
+  description: Sends the robot to delivery point C.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_C"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-d
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Point D"
+  group: Navigation
+  description: Sends the robot to delivery point D.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_D"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-e
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Point E"
+  group: Navigation
+  description: Sends the robot to delivery point E.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_E"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: wdc-goto-home
+  scope: robot/rnLasGAxn5CP7bj32/223623373
+spec:
+  type: PublishToTopic
+  label: "Go to Home"
+  group: Navigation
+  description: Sends the robot to its Home point.
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: topic
+      value: inorbit/custom_command
+    - name: message
+      value: "GOTO_HOME"
