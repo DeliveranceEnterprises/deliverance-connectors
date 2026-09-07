@@ -39,7 +39,7 @@ metadata:
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   type: RunScript
-  label: "Clean: Hotel_Hospital"
+  label: "Demo_Hotel_Hospital"
   group: Cleaning
   description: Start the Hotel_Hospital cleaning task. Robot returns to dock when done.
   confirmation:
@@ -63,7 +63,7 @@ metadata:
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   type: RunScript
-  label: "Clean: ShoppingMall_Retail"
+  label: "Demo_ShoppingMall_Retail"
   group: Cleaning
   # Task name in the Allybot app is " Shopping_Retail" (leading space, shortened) --
   # the plan/zone itself is named "ShoppingMall_Retail", kept as the InOrbit label
