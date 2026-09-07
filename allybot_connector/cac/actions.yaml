@@ -35,6 +35,57 @@ spec:
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
+  id: allybot-clean-hotel-hospital
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: "Clean: Hotel_Hospital"
+  group: Cleaning
+  description: Start the Hotel_Hospital cleaning task. Robot returns to dock when done.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: start_task
+    - name: task_id
+      type: string
+      value: "dc6ed8db2848365649754077f57fb281"
+    - name: reach_charge_point
+      type: string
+      value: "true"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: allybot-clean-shopping-retail
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  type: RunScript
+  label: "Clean: ShoppingMall_Retail"
+  group: Cleaning
+  # Task name in the Allybot app is " Shopping_Retail" (leading space, shortened) --
+  # the plan/zone itself is named "ShoppingMall_Retail", kept as the InOrbit label
+  # for clarity since that's what Carlos actually asked for.
+  description: Start the ShoppingMall_Retail cleaning task. Robot returns to dock when done.
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: start_task
+    - name: task_id
+      type: string
+      value: "d18cba6929bb0b43ce667c4f4196eee7"
+    - name: reach_charge_point
+      type: string
+      value: "true"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
   id: allybot-pause-task
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:

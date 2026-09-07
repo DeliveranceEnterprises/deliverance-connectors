@@ -205,6 +205,9 @@ class AllybotAppWebSocket:
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
+        state.ws_connected = True
+        state.last_ws_message = time.time()
+
     def _on_device_status(self, body: dict) -> None:
         """Handle devicestatus — full device snapshot including battery and work_status (~1 Hz)."""
         data = body.get("data") or {}
@@ -257,6 +260,17 @@ class AllybotAppWebSocket:
             # a final mission_tracking entry before clearing state next cycle.
             if prev and not state.have_task_running:
                 state.task_status_code = None  # signals natural completion
+
+        # Found live, 2026-09-07: ws_connected used to be set ONLY in
+        # _on_device_position, so a docked/charging robot (which stops
+        # reporting position -- data.location is false while docked, only
+        # devicestatus keeps arriving) never marked itself connected. InOrbit
+        # then raised a permanent false "WS Connected: error" incident even
+        # though the WebSocket was fine and real telemetry (battery,
+        # work_status) was flowing the whole time. Any real message proves
+        # the connection is alive, not just a position fix.
+        state.ws_connected = True
+        state.last_ws_message = time.time()
 
     def _mark_all_disconnected(self) -> None:
         for state in self._robot_states.values():
