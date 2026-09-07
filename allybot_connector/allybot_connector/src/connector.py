@@ -28,6 +28,18 @@ _WS_TIMEOUT_S = 60.0
 # How often to refresh robot metadata and map info via REST.
 _METADATA_POLL_INTERVAL_S = 60.0
 
+# Mission label overrides, keyed by task_id -- the Allybot app's own task name
+# (state.task_name, what the mission label defaults to) can't be renamed via
+# the API (only the InOrbit ActionDefinition label can), so demo task_ids that
+# got relabeled in cac/actions.yaml need the same override here or the
+# Missions widget keeps showing the app's original name (e.g. "Shopping_Retail")
+# even after the button itself says "Demo Clean B". Add an entry here whenever
+# a demo action's label changes without a matching change in the Allybot app.
+_MISSION_LABEL_OVERRIDES = {
+    "dc6ed8db2848365649754077f57fb281": "Demo Clean A",
+    "d18cba6929bb0b43ce667c4f4196eee7": "Demo Clean B",
+}
+
 
 class AllybotConnector(FleetConnector):
     """InOrbit Fleet Connector for the Ally Fleet Robot API.
@@ -272,7 +284,7 @@ class AllybotConnector(FleetConnector):
             "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
-            "label": state.task_name or state.task_id,
+            "label": _MISSION_LABEL_OVERRIDES.get(state.task_id, state.task_name or state.task_id),
             "startTs": start_ts,
             "data": data,
             "status": "OK",
