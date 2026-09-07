@@ -39,9 +39,15 @@ metadata:
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   type: RunScript
-  label: "Demo_Hotel_Hospital"
+  label: "Demo Clean A"
   group: Cleaning
-  description: Start the Hotel_Hospital cleaning task. Robot returns to dock when done.
+  # Repurposed 2026-09-07 for Use Case 1 (Factory/Warehouse): Allybot stands in
+  # for the not-yet-integrated Viggo SC50 (industrial floor cleaning) per
+  # Eduardo's own InOrbit_RobotSpaceEU_UseCases.pdf, which labels these two
+  # zones "Clean A -- Aisle/Shift Prep" and "Clean B -- Spill Event" -- same
+  # underlying Hotel_Hospital zone/task, just relabeled for the Factory demo
+  # narrative, not a new physical area.
+  description: Start the Clean A (Aisle / Shift Prep) cleaning task for the Factory/Warehouse demo. Robot returns to dock when done.
   confirmation:
     required: false
   lock: false
@@ -63,12 +69,13 @@ metadata:
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   type: RunScript
-  label: "Demo_ShoppingMall_Retail"
+  label: "Demo Clean B"
   group: Cleaning
   # Task name in the Allybot app is " Shopping_Retail" (leading space, shortened) --
-  # the plan/zone itself is named "ShoppingMall_Retail", kept as the InOrbit label
-  # for clarity since that's what Carlos actually asked for.
-  description: Start the ShoppingMall_Retail cleaning task. Robot returns to dock when done.
+  # the plan/zone itself is named "ShoppingMall_Retail". Repurposed 2026-09-07
+  # for Use Case 1 (Factory/Warehouse), same reasoning as allybot-clean-hotel-hospital
+  # above -- "Clean B -- Spill Event" per Eduardo's PDF, same underlying zone/task.
+  description: Start the Clean B (Spill Event) cleaning task for the Factory/Warehouse demo. Robot returns to dock when done.
   confirmation:
     required: false
   lock: false
