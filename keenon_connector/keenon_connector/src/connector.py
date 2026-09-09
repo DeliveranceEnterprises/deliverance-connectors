@@ -340,6 +340,8 @@ class KeenonConnector(FleetConnector):
                 state.task_report = None
                 state.task_report_attempts = 0
                 state.task_report_last_attempt = 0.0
+                state.task_dest_point_uuid = cmd.point_uuid
+                state.task_dest_snapped = False
 
             case CustomScripts.RETURN_TO_ORIGIN:
                 task_no = await self._api_client.return_to_origin(
@@ -354,6 +356,13 @@ class KeenonConnector(FleetConnector):
                 state.task_report = None
                 state.task_report_attempts = 0
                 state.task_report_last_attempt = 0.0
+                # Deliberately NOT setting task_dest_point_uuid -- this
+                # endpoint has been confirmed to fake completion without
+                # real movement (see KNOWN_POINT_COORDINATES' own docstring
+                # and the project_keenon_remote_control_investigation
+                # memory), so its "completion" must never trigger a
+                # position snap.
+                state.task_dest_point_uuid = None
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)

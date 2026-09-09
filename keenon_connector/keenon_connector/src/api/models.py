@@ -103,6 +103,43 @@ WATER_TANK_STATE_MAP: dict[int, str] = {
 # Task statuses that indicate the task is no longer active
 TERMINAL_TASK_STATUSES = {0, 4, 5}
 
+# Task statuses that mean the robot genuinely arrived (as opposed to failing,
+# being cancelled, or merely being accepted) -- used to trigger the position
+# snap below. Deliberately does NOT include 0 (failed) or 5 (cancelled).
+ARRIVED_TASK_STATUSES = {4, 6}  # completed, target_reached
+
+# Known-good real-world coordinates for `call_to_point` destinations, in the
+# SAME frame/units the robot's own /custom/robot/location endpoint reports
+# (metres, robot-local frame -- NOT the map-image pixel coordinates from
+# /map/position, a different scale entirely). Keenon's own live position feed
+# has been found unreliable for anything that didn't complete a real,
+# API-tracked call_to_point task -- confirmed live 2026-09-09: `location`
+# reported a stale/stuck coordinate while the robot was, per direct visual
+# confirmation, actually somewhere else. Since we KNOW where a `call_to_point`
+# target really is once the task genuinely reaches it (taskStatus 4/6, see
+# ARRIVED_TASK_STATUSES), snap the published pose to that known point instead
+# of trusting the live feed for that moment -- see
+# DataPoller._update_task_status()'s use of this dict.
+#
+# Each entry MUST come from watching a real arrival (coordinate changing live,
+# confirmed visually against the robot, not read off /map/position's
+# different pixel-scale coordinate system) -- never guessed. Keyed by the
+# same point_uuid the `call_to_point` command itself uses
+# (keenon_connector/cac/actions.yaml's Send to Mesa N / Demo Delivery
+# entries). Points not listed here simply don't get snapped -- the live feed
+# is used as-is, unreliable or not.
+KNOWN_POINT_COORDINATES: dict[str, tuple[float, float, float]] = {
+    # Mesa 3 (pointId 6) -- confirmed live 2026-09-09: dispatched via
+    # `call_to_point`, watched `location` change in real time
+    # (3.9,1.54 staging -> here), Carlos confirmed visually it was a real,
+    # new arrival, not a stuck reading.
+    "bf13d6f6d4c31e00b678493da35aee41": (-1.74, 1.23, 0.0),
+    # Mesa 1 (3b2a81089aae8186d7c9a413725a3a5d) and Mesa 2
+    # (cec1284e136c488b3fd227a6b51b6b0a): NOT yet captured. Mesa 2's one real
+    # attempt got stuck mid-route (never arrived) -- do not add either
+    # without a real, watched arrival first, same standard as Mesa 3 above.
+}
+
 
 def detect_robot_type(robot_model: str | None) -> str:
     """Detect robot type from model string.
@@ -170,6 +207,10 @@ class RobotState:
     task_report: dict | None = None  # fetched from Keenon API after task completes
     task_report_attempts: int = 0    # bounded retries for the report fetch
     task_report_last_attempt: float = 0.0  # monotonic ts of last report fetch try
+    task_dest_point_uuid: str | None = None  # set on call_to_point, used for the
+                                              # position snap (KNOWN_POINT_COORDINATES)
+    task_dest_snapped: bool = False  # True once the snap has been applied for
+                                      # this task, so it isn't re-logged every poll
 
     # Cleaning-specific (populated only when robot_type == "clean")
     clean_main_state: int | None = None

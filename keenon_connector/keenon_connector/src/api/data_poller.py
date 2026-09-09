@@ -9,7 +9,14 @@ import logging
 import time
 
 from .client import KeenonAPIClient
-from .models import RobotState, TERMINAL_TASK_STATUSES, detect_robot_type, parse_coordinate
+from .models import (
+    ARRIVED_TASK_STATUSES,
+    KNOWN_POINT_COORDINATES,
+    RobotState,
+    TERMINAL_TASK_STATUSES,
+    detect_robot_type,
+    parse_coordinate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +208,35 @@ class DataPoller:
         # task_no is intentionally kept after reaching a terminal status so the
         # connector can publish the final mission_tracking state.  It is cleared
         # when the next task is dispatched.
+
+        # Position snap: Keenon's own live /custom/robot/location feed has
+        # been found unreliable (confirmed live 2026-09-09 -- stuck reporting
+        # a stale point while the robot was, per direct visual confirmation,
+        # genuinely elsewhere). Once a call_to_point task genuinely arrives
+        # (see ARRIVED_TASK_STATUSES -- deliberately excludes failed/
+        # cancelled), override the published pose with the known-good real
+        # coordinate for that destination instead of trusting the live feed
+        # for this moment. Only fires for points we've actually verified by
+        # watching a real arrival (KNOWN_POINT_COORDINATES) -- silently does
+        # nothing for any other point, same as before this change.
+        if state.task_status in ARRIVED_TASK_STATUSES and state.task_dest_point_uuid:
+            snap = KNOWN_POINT_COORDINATES.get(state.task_dest_point_uuid)
+            if snap:
+                # Re-applied every poll (not just once) since _update_location
+                # runs BEFORE this method each cycle and could otherwise
+                # overwrite state.x/y/yaw with the unreliable live value again
+                # on the very next tick -- this keeps the pose pinned to the
+                # known-good point for as long as the robot is genuinely
+                # parked there (i.e. until the next task changes
+                # task_dest_point_uuid). Only logged once per arrival.
+                state.x, state.y, state.yaw = snap
+                if not state.task_dest_snapped:
+                    state.task_dest_snapped = True
+                    logger.info(
+                        "Snapped position to known point %s: x=%.3f y=%.3f yaw=%.3f "
+                        "(live location feed not trusted for this arrival)",
+                        state.task_dest_point_uuid, *snap,
+                    )
 
         # Once the task is terminal, fetch the task detail (task/info, keyed by
         # taskNo) for the report.  We retry while the report is still missing —
