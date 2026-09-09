@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Preferences — Keenon Connector
+# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
+#
+# navigationWidget.actions whitelist -- without this, the Navigation control
+# widget's LOCK dropdown shows ALL account-level actions with
+# widgets: ["navigation"], including other robots' (broken icons). See
+# ../CLAUDE.md's "CRITICAL: Do NOT overwrite Preferences" -- this was already
+# correctly configured live in InOrbit before this file existed; captured
+# here now so it's versioned, not overwritten. Only ever ADD ids here, never
+# remove existing ones without checking they're truly gone from actions.yaml
+# first.
+
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  navigationWidget:
+    actions:
+      - keenon-send-to-mesa-1
+      - keenon-send-to-mesa-2
+      - keenon-send-to-mesa-3
+      - keenon-return-to-origin
+      - keenon-cancel-task
+      - keenon-clean-recharge
+      - keenon-clean-finish
+      - keenon-clean-pause
+      - keenon-clean-temporary-task
+      - keenon-open-cabin
+      - keenon-close-cabin
+      - keenon-demo-delivery-a
+      - keenon-demo-delivery-b
+      - keenon-demo-delivery-c

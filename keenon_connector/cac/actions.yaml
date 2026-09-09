@@ -108,6 +108,105 @@ spec:
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
+  id: keenon-demo-delivery-a
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  type: RunScript
+  label: "Demo Delivery A"
+  group: Demo
+  description: Send the robot to Mesa 1 (Demo Delivery A).
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: "3b2a81089aae8186d7c9a413725a3a5d"
+    - name: point_id
+      type: string
+      value: "4"
+    - name: scene_code
+      type: string
+      value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Demo Delivery A"
+    - name: group
+      type: string
+      value: "Demo"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-demo-delivery-b
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  type: RunScript
+  label: "Demo Delivery B"
+  group: Demo
+  description: Send the robot to Mesa 2 (Demo Delivery B).
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: "cec1284e136c488b3fd227a6b51b6b0a"
+    - name: point_id
+      type: string
+      value: "5"
+    - name: scene_code
+      type: string
+      value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Demo Delivery B"
+    - name: group
+      type: string
+      value: "Demo"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: keenon-demo-delivery-c
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  type: RunScript
+  label: "Demo Delivery C"
+  group: Demo
+  description: Send the robot to Mesa 3 (Demo Delivery C).
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: call_to_point
+    - name: point_uuid
+      type: string
+      value: "bf13d6f6d4c31e00b678493da35aee41"
+    - name: point_id
+      type: string
+      value: "6"
+    - name: scene_code
+      type: string
+      value: "x4JmTv"
+    - name: label
+      type: string
+      value: "Demo Delivery C"
+    - name: group
+      type: string
+      value: "Demo"
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
   id: keenon-return-to-origin
   scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:

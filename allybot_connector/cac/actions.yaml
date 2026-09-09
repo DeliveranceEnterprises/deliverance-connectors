@@ -40,7 +40,7 @@ metadata:
 spec:
   type: RunScript
   label: "Demo Clean A"
-  group: Cleaning
+  group: Demo
   # Repurposed 2026-09-07 for Use Case 1 (Factory/Warehouse): Allybot stands in
   # for the not-yet-integrated Viggo SC50 (industrial floor cleaning) per
   # Eduardo's own InOrbit_RobotSpaceEU_UseCases.pdf, which labels these two
@@ -70,7 +70,7 @@ metadata:
 spec:
   type: RunScript
   label: "Demo Clean B"
-  group: Cleaning
+  group: Demo
   # Task name in the Allybot app is " Shopping_Retail" (leading space, shortened) --
   # the plan/zone itself is named "ShoppingMall_Retail". Repurposed 2026-09-07
   # for Use Case 1 (Factory/Warehouse), same reasoning as allybot-clean-hotel-hospital
