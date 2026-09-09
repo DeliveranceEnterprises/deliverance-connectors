@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Two standalone, single-camera dashboards for the Robot Space EU demo --
+# each embeds just ONE office camera feed, no other widget. Two separate
+# DashboardDefinition objects (not one dashboard with both cameras) so each
+# can be embedded independently, matching the same "doesn't have to be one
+# HTML page" approach as the sibling action dashboards:
+#   keenon_connector/cac/dashboard_demo_actions.yaml
+#   allybot_connector/cac/dashboard_demo_actions.yaml
+#   agents/deliverance-agent-wdc/cac/dashboard_demo_actions.yaml
+#
+# cameraId: '0' matches this camera's own RobotCamera CAC id (cac/robot_camera.yaml).
+# Account: Deliverance (rnLasGAxn5CP7bj32)
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: d-Demo-Camera1
+  scope: account/rnLasGAxn5CP7bj32
+spec:
+  label: Office Camera 1
+  sections:
+  - label: Office Camera 1
+    scope: robot
+    widgets:
+    - config:
+        cameraId: '0'
+      label: Office Camera 1
+      layout:
+        chroma: true
+        grid: 12
+        height: 2
+      type: cameraWidget
+---
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: d-Demo-Camera2
+  scope: account/rnLasGAxn5CP7bj32
+spec:
+  label: Office Camera 2
+  sections:
+  - label: Office Camera 2
+    scope: robot
+    widgets:
+    - config:
+        cameraId: '0'
+      label: Office Camera 2
+      layout:
+        chroma: true
+        grid: 12
+        height: 2
+      type: cameraWidget

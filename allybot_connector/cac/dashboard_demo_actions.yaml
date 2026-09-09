@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Standalone, single-purpose dashboard for the Robot Space EU demo: ONLY
+# Allybot's Demo-group actions (Demo Clean A/B), no other Allybot action or
+# widget. Same pattern/rationale as the sibling files:
+#   keenon_connector/cac/dashboard_demo_actions.yaml
+#   agents/deliverance-agent-wdc/cac/dashboard_demo_actions.yaml
+#   ezviz_connector/cac/dashboard_demo_cameras.yaml
+# Account: Deliverance (rnLasGAxn5CP7bj32)
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: d-Demo-AllybotActions
+  scope: account/rnLasGAxn5CP7bj32
+spec:
+  label: Allybot Demo Actions
+  sections:
+  - label: Allybot Demo Actions
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - allybot-clean-hotel-hospital
+        - allybot-clean-shopping-retail
+        bigButtons: true
+        expanded: true
+      label: Allybot Demo Actions
+      layout:
+        chroma: true
+        grid: 12
+        height: 1
+      type: actionsWidget

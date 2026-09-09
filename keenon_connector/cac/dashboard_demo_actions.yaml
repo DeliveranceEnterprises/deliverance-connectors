@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Standalone, single-purpose dashboard for the Robot Space EU demo: ONLY
+# Keenon's Demo-group actions (Demo Delivery A/B/C), no other Keenon action
+# or widget. Built so it can be embedded on its own (InOrbit's "Embeds"
+# feature, Settings > Robot Data > Dashboards > <> button) into an external
+# HTML page Eduardo will fold into the real Deliverance platform -- see
+# CLAUDE.md's "InOrbit Embeds feature" note and the parallel per-robot files:
+#   allybot_connector/cac/dashboard_demo_actions.yaml
+#   agents/deliverance-agent-wdc/cac/dashboard_demo_actions.yaml
+#   ezviz_connector/cac/dashboard_demo_cameras.yaml
+#
+# No `conditional: tags` here on purpose -- unlike the shared global
+# dashboards (d-Robot-lLybVa / d-Navigation-Z8YZAb), this dashboard exists
+# only to be embedded from Keenon's own robot context, so it always renders
+# its one section regardless of which robot page it's opened from.
+# Account: Deliverance (rnLasGAxn5CP7bj32)
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: d-Demo-KeenonActions
+  scope: account/rnLasGAxn5CP7bj32
+spec:
+  label: Keenon Demo Actions
+  sections:
+  - label: Keenon Demo Actions
+    scope: robot
+    widgets:
+    - config:
+        actionIds:
+        - keenon-demo-delivery-a
+        - keenon-demo-delivery-b
+        - keenon-demo-delivery-c
+        bigButtons: true
+        expanded: true
+      label: Keenon Demo Actions
+      layout:
+        chroma: true
+        grid: 12
+        height: 1
+      type: actionsWidget
