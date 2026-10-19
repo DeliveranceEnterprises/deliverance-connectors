@@ -271,6 +271,12 @@ class AllybotConnector(FleetConnector):
         in_progress = state.have_task_running or False
         now_ms = int(time.time() * 1000)
 
+        if not in_progress and state.run_seen_at is None:
+            # The task was dispatched (start_task returned OK) but the robot has not
+            # reported it running yet. Publishing now would invent a mission with the
+            # dispatch time as both start and end (seen live 2026-10-19 14:04).
+            return None
+
         if state.task_start_ts is None:
             waiting = (
                 in_progress
@@ -410,6 +416,11 @@ class AllybotConnector(FleetConnector):
                 )
                 state.task_id = cmd.task_id
                 state.task_status_code = 3  # Starting
+                # A new run: forget the previous run's timing so its final report is
+                # not republished and the new one waits for the robot to report it.
+                state.task_start_ts = None
+                state.task_end_ts = None
+                state.run_seen_at = None
 
             case CustomScripts.PAUSE_TASK:
                 await self._api_client.task_action(device_id=fleet_id, action_type=1)

@@ -365,3 +365,18 @@ def test_new_run_waits_for_robot_start_time_then_falls_back() -> None:
     report = connector._build_mission_report(state)
     assert report is not None and report["startTs"] == state.task_start_ts
     assert connector._build_mission_report(state)["startTs"] == report["startTs"]  # stable
+
+
+def test_dispatched_task_is_not_published_until_robot_reports_running() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+
+    # start_task just returned OK: task_id set, robot not yet running
+    state.task_id, state.task_status_code = "task-A", 3
+    assert connector._build_mission_report(state) is None
+
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_body(1_000_000))
+    report = connector._build_mission_report(state)
+    assert report is not None and report["missionId"] == "task-A_1000000"
