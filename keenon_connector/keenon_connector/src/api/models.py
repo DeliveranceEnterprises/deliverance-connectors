@@ -202,6 +202,7 @@ class RobotState:
     task_no: str | None = None
     task_status: int | None = None  # see TASK_STATUS_MAP
     task_start_ts: int | None = None  # ms timestamp when task was dispatched
+    task_end_ts: int | None = None    # ms timestamp, fixed when the task is first seen finished
     task_name: str | None = None    # human-readable label (e.g. "Send to Mesa 1")
     task_group: str | None = None   # action group (e.g. "Delivery", "Cleaning", "Hotel")
     task_report: dict | None = None  # fetched from Keenon API after task completes

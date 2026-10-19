@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -239,3 +240,81 @@ def test_is_fleet_robot_online_reflects_api_connected() -> None:
 
     connector._robot_states["robot-1"].api_connected = True
     assert connector._is_fleet_robot_online("robot-1") is True
+
+
+# ---------------------------------------------------------------------------
+# A failed task must not leave a ghost "Executing" mission nor a stuck "Error"
+# (seen live 2026-10-19: task beb93e... failed, mode stayed Error for hours)
+# ---------------------------------------------------------------------------
+
+
+def _state(**kw) -> RobotState:
+    base = dict(robot_type="food", api_connected=True, task_no="task-1", task_start_ts=1_000)
+    base.update(kw)
+    return RobotState(**base)
+
+
+def test_failed_task_is_published_as_aborted_not_executing() -> None:
+    connector = _make_connector()
+    state = _state(task_status=0)
+
+    report = connector._build_mission_report(state)
+
+    assert report["state"] == "Aborted"
+    assert report["inProgress"] is False
+    assert report["status"] == "Error"
+    assert "currentTaskId" not in report
+    assert report["endTs"] is not None
+
+
+def test_task_without_status_yet_stays_executing() -> None:
+    connector = _make_connector()
+    report = connector._build_mission_report(_state(task_status=None))
+    assert report["state"] == "Executing" and report["inProgress"] is True
+    assert "endTs" not in report
+
+
+def test_finished_task_end_time_is_fixed() -> None:
+    connector = _make_connector()
+    state = _state(task_status=4)
+    first = connector._build_mission_report(state)["endTs"]
+    time.sleep(0.01)
+    assert connector._build_mission_report(state)["endTs"] == first
+
+
+def test_mode_returns_to_dock_logic_after_a_failed_task() -> None:
+    connector = _make_connector()
+    # at the dock and unavailable -> Charging; available -> Idle; never Error
+    assert connector._compute_mission_status(
+        _state(task_status=0, charge_status=1, can_be_called=False)) == "Charging"
+    assert connector._compute_mission_status(
+        _state(task_status=0, charge_status=0, can_be_called=True)) == "Idle"
+    for terminal in (4, 5):
+        assert connector._compute_mission_status(_state(task_status=terminal)) == "Idle"
+
+
+def test_mode_is_still_mission_while_active_and_error_when_api_down() -> None:
+    connector = _make_connector()
+    for active in (1, 2, 3, 6, 7):
+        assert connector._compute_mission_status(_state(task_status=active)) == "Mission"
+    assert connector._compute_mission_status(_state(task_status=3, api_connected=False)) == "Error"
+
+
+def test_webhook_for_a_different_task_resets_name_and_end_time() -> None:
+    from keenon_connector.src.api.webhook_receiver import KeenonWebhookReceiver
+
+    connector = _make_connector()
+    state = connector._robot_states["robot-1"]
+    state.task_no, state.task_name, state.task_end_ts = "old", "Return to Origin", 5_000
+    receiver = KeenonWebhookReceiver.__new__(KeenonWebhookReceiver)
+    receiver._fleet_sn_to_robot_id = connector._fleet_sn_to_robot_id
+    receiver._robot_states = connector._robot_states
+
+    receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": 3})
+    assert state.task_no == "new" and state.task_status == 3
+    assert state.task_name is None and state.task_end_ts is None
+    assert state.task_start_ts is not None
+
+    state.task_name, state.task_end_ts = "kept", 9_000
+    receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": 4})
+    assert state.task_name == "kept" and state.task_end_ts == 9_000  # same task: untouched
