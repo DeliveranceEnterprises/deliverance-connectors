@@ -11,7 +11,7 @@ import time
 
 import aiohttp
 
-from .models import AllybotRobotState, quaternion_to_yaw
+from .models import AllybotRobotState, normalize_work_status, quaternion_to_yaw
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +240,7 @@ class AllybotAppWebSocket:
             except (TypeError, ValueError):
                 pass
 
-        state.work_status = data.get("work_status")
+        state.work_status = normalize_work_status(data.get("work_status"))
 
         # Cleaning mode + area from the data.clean sub-object (null when idle).
         clean = data.get("clean") or {}
@@ -256,10 +256,24 @@ class AllybotAppWebSocket:
         if have_task is not None:
             prev = state.have_task_running
             state.have_task_running = bool(have_task)
+            if state.have_task_running and not prev:
+                # A new run begins (or the connector restarted mid-run). Drop the
+                # previous run's start/end and counters so this run gets its OWN
+                # startTs, hence its own missionId. Before this, task_start_ts was
+                # copied from the robot once and never reset, so every later run
+                # was published under the first run's missionId and InOrbit (and
+                # the platform, which keys tasks by start time) merged them all.
+                state.task_start_ts = None
+                state.task_end_ts = None
+                state.run_seen_at = time.monotonic()
+                state.task_percentage = None
+                state.cleaned_area = None
+                state.plan_area = None
             # Task just finished — mark complete so the connector can publish
             # a final mission_tracking entry before clearing state next cycle.
             if prev and not state.have_task_running:
                 state.task_status_code = None  # signals natural completion
+                state.task_end_ts = int(time.time() * 1000)
 
         # Found live, 2026-09-07: ws_connected used to be set ONLY in
         # _on_device_position, so a docked/charging robot (which stops

@@ -22,6 +22,22 @@ logger = logging.getLogger(__name__)
 ALLYBOT_SUCCESS = 619  # most common success code; some endpoints use others
 # A response is successful when message == "success" regardless of code variance.
 
+SESSION_LOST_CODE = 505  # "LOGGED IN SOMEWHERE ELSE"
+
+
+class AllybotSessionExpired(ValueError):
+    """Another login invalidated this client's session.
+
+    The Allybot cloud keeps ONE session per account: any other login (the phone
+    app, another connector instance, a script) silently kills ours. Every call
+    that needs the token then fails until we log in again. Subclasses ValueError
+    so existing handlers that catch ValueError keep working.
+    """
+
+
+def _is_session_lost(message: str | None, code: int | None = None) -> bool:
+    return code == SESSION_LOST_CODE or "logged in somewhere else" in (message or "").lower()
+
 
 def _is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):
@@ -153,6 +169,13 @@ class AllybotAPIClient:
     def _is_success(self, body: dict) -> bool:
         return body.get("message", "").lower() == "success" or body.get("code") == 200
 
+    def _api_error(self, path: str, body: dict) -> ValueError:
+        message, code = body.get("message"), body.get("code")
+        text = f"Allybot API error on {path}: {message} ({code})"
+        if _is_session_lost(message, code):
+            return AllybotSessionExpired(text)
+        return ValueError(text)
+
     @_retry()
     async def _get(self, path: str, headers: dict, **kwargs) -> dict | list | None:
         resp = await self._http.get(path, headers=headers, **kwargs)
@@ -161,7 +184,7 @@ class AllybotAPIClient:
         resp.raise_for_status()
         body = resp.json()
         if not self._is_success(body):
-            raise ValueError(f"Allybot API error on {path}: {body.get('message')} ({body.get('code')})")
+            raise self._api_error(path, body)
         return body.get("data")
 
     @_retry()
@@ -170,8 +193,23 @@ class AllybotAPIClient:
         resp.raise_for_status()
         body = resp.json()
         if not self._is_success(body):
-            raise ValueError(f"Allybot API error on {path}: {body.get('message')} ({body.get('code')})")
+            raise self._api_error(path, body)
         return body.get("data")
+
+    async def _with_relogin(self, call):
+        """Run a command; if our session was killed, log in again and retry ONCE.
+
+        Only commands use this (start/pause/resume/stop). Polling deliberately does
+        not: a background poll re-logging in every minute would fight any other
+        session (e.g. someone using the phone app) and keep kicking it out. A
+        command is an explicit request, so taking the session back is intended.
+        """
+        try:
+            return await call()
+        except AllybotSessionExpired:
+            logger.warning("Allybot session lost (another login) — logging in again and retrying once")
+            await self.login()
+            return await call()
 
     # ------------------------------------------------------------------
     # Data endpoints
@@ -289,8 +327,16 @@ class AllybotAPIClient:
     ) -> None:
         """POST /fleetapi/clean/default/start — dispatches a cleaning task to the robot.
 
-        Raises ValueError if the API rejects the task.
+        Raises ValueError if the API rejects the task. If the rejection is because
+        another login killed our session, logs in again and retries once.
         """
+        await self._with_relogin(
+            lambda: self._start_task_once(device_id, task_id, reach_charge_point)
+        )
+
+    async def _start_task_once(
+        self, device_id: str, task_id: str, reach_charge_point: bool
+    ) -> None:
         await self._check_task_reachable(device_id, task_id)
         # The mobile app waits ~2 s after the reachability check before dispatching —
         # the server needs this time to pre-compute the path plan.
@@ -314,10 +360,16 @@ class AllybotAPIClient:
         data = body.get("data")
         if data is not True:
             msg = body.get("message", "unknown error")
-            raise ValueError(f"Task start rejected by robot: {msg} (data={data})")
+            text = f"Task start rejected by robot: {msg} (data={data})"
+            if _is_session_lost(msg, body.get("code")):
+                raise AllybotSessionExpired(text)
+            raise ValueError(text)
 
     async def task_action(self, device_id: str, action_type: int) -> None:
         """POST /fleetapi/device/taskaction — pause(1) / resume(0) / stop(2) a running task."""
+        await self._with_relogin(lambda: self._task_action_once(device_id, action_type))
+
+    async def _task_action_once(self, device_id: str, action_type: int) -> None:
         await self._post(
             "/fleetapi/device/taskaction",
             headers=self._mobile_headers(),

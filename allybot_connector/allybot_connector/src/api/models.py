@@ -31,6 +31,29 @@ TASK_STATUS_MAP: dict[int, str] = {
     9: "Paused",
 }
 
+# The robot's devicestatus WS reports work_status in two languages depending on
+# which side of the Allybot cloud produced the message: seen live 2026-10-19,
+# one ~1 Hz stream alternating "Charging" / "Cargando", "Operating" /
+# "En funcionamiento" and "Returning" / "Volviendo". Everything downstream
+# (mission_status, the InOrbit status widgets) compares against the English
+# names, so a Spanish message made a docked robot flip to "Idle".
+_WORK_STATUS_CANONICAL: dict[str, str] = {
+    "charging": "Charging",
+    "cargando": "Charging",
+    "operating": "Operating",
+    "en funcionamiento": "Operating",
+    "returning": "Returning",
+    "volviendo": "Returning",
+    "idle": "Idle",
+}
+
+
+def normalize_work_status(raw: str | None) -> str | None:
+    """Return the canonical English work_status; unknown values pass through."""
+    if not raw:
+        return raw
+    return _WORK_STATUS_CANONICAL.get(raw.strip().casefold(), raw)
+
 
 @dataclass
 class AllybotRobotState:
@@ -60,6 +83,8 @@ class AllybotRobotState:
     task_percentage: float | None = None  # 0-100
     task_status_code: int | None = None  # 3=Starting, 5=Running, 9=Paused
     task_start_ts: int | None = None  # epoch ms
+    task_end_ts: int | None = None  # epoch ms, fixed the first time the run is seen finished
+    run_seen_at: float | None = None  # time.monotonic() when the current run was first seen
     # Cleaning report (partial — built from the data the App WS exposes; the
     # full manufacturer report with electric/water consumption + coverage image
     # needs the robot's cleaning-report endpoint, which is not available here).

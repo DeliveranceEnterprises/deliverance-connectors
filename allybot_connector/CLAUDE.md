@@ -49,7 +49,9 @@ adding a new mission per cleaning run.
 ## Known issues
 - `task_status` goes stale — not shown in Status widget, use `have_task_running` instead.
 - Teleop not implemented — connector does not handle `ros/teleop/step` or `ros/nav/goal_path`.
-- Action execution fails with "LOGGED IN SOMEWHERE ELSE" when another session (e.g. Raspberry Pi connector) holds the WebSocket. Not a CAC issue — it's the robot API rejecting a second connection.
+- Action execution fails with "LOGGED IN SOMEWHERE ELSE" when another session (e.g. Raspberry Pi connector, the phone app, a script) holds the account: the Allybot cloud keeps ONE session per account and any other login silently kills ours. Not a CAC issue. Since 2026-10-19 the client logs in again and retries ONCE when a command (start/pause/resume/stop) hits this error (`AllybotAPIClient._with_relogin`); background polling deliberately does not, so it never fights another session. Two connector instances for the same robot still fight each other: run exactly one.
+- `work_status` arrives in two languages ("Charging"/"Cargando", "Operating"/"En funcionamiento", "Returning"/"Volviendo") from the same ~1 Hz WS stream; `normalize_work_status` maps them to the English names so the mode does not flip between Charging and Idle.
+- Each run now resets `task_start_ts`/`task_end_ts` when `haveTaskRunning` goes false to true, so it gets its own missionId, and the finished mission's end time is fixed (republished for 60 s, then dropped).
 
 ## Charging station
 `allybot-cs` SpatialAnnotation in RS EU location: `x: 4.049, y: 0.035, theta: -1.614`

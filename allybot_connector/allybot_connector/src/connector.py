@@ -241,7 +241,9 @@ class AllybotConnector(FleetConnector):
         kv["mission_status"] = self._compute_mission_status(state)
 
         if state.task_id:
-            kv["mission_tracking"] = self._build_mission_report(state)
+            report = self._build_mission_report(state)
+            if report is not None:
+                kv["mission_tracking"] = report
 
         self.publish_robot_key_values(robot_id, **kv)
 
@@ -254,9 +256,36 @@ class AllybotConnector(FleetConnector):
         None: "Completed",  # WS stream stopped → natural completion
     }
 
-    def _build_mission_report(self, state: AllybotRobotState) -> dict:
+    # A new run waits this long for the robot's own startTime (it arrives in the
+    # devicestasktatus WS stream) before falling back to the connector's clock.
+    _START_TS_GRACE_S = 5.0
+    # After a run finishes its final report is republished for this long, then
+    # dropped: InOrbit keeps the last mission_tracking value, and republishing
+    # it every second with endTs=now made the finished mission's end time creep
+    # forward for hours (seen live 2026-10-19).
+    _FINAL_REPORT_WINDOW_S = 60.0
+
+    def _build_mission_report(self, state: AllybotRobotState) -> dict | None:
+        """Mission report for the current run, or None when nothing should be published."""
         mission_state = self._MISSION_STATE.get(state.task_status_code, "Completed")
         in_progress = state.have_task_running or False
+        now_ms = int(time.time() * 1000)
+
+        if state.task_start_ts is None:
+            waiting = (
+                in_progress
+                and state.run_seen_at is not None
+                and time.monotonic() - state.run_seen_at < self._START_TS_GRACE_S
+            )
+            if waiting:
+                return None
+            state.task_start_ts = now_ms  # stable fallback: set once, not every cycle
+
+        if not in_progress:
+            if state.task_end_ts is None:
+                state.task_end_ts = now_ms
+            if now_ms - state.task_end_ts > self._FINAL_REPORT_WINDOW_S * 1000:
+                return None
         # Partial cleaning report — only the fields the App WS exposes.  These
         # ride along in mission_tracking.data and InOrbit prefixes them with
         # "data_" in kpis/objects, where the Deliverance mapper rebuilds them
@@ -275,7 +304,7 @@ class AllybotConnector(FleetConnector):
             data["sewage_water"] = state.sewage_water
         if state.task_mode:
             data["task_mode"] = state.task_mode
-        start_ts = state.task_start_ts or int(time.time() * 1000)
+        start_ts = state.task_start_ts
         # Suffix with startTs so each cleaning run gets a unique missionId.
         # Without this InOrbit deduplicates by missionId and overwrites the
         # same 2 entries instead of creating a new one per run.
@@ -294,7 +323,7 @@ class AllybotConnector(FleetConnector):
         if in_progress:
             report["currentTaskId"] = "0"
         else:
-            report["endTs"] = int(time.time() * 1000)
+            report["endTs"] = state.task_end_ts
         return report
 
     def _compute_mission_status(self, state: AllybotRobotState) -> str:
