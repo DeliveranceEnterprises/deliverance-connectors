@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Logs, including rotated ones (*.log.1)
+*.log
+*.log.*
