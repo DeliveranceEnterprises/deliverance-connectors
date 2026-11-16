@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# TurtleBot ROS 2 / Gazebo / Nav2 custom Office Demo configuration.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: turtlebot
+update_freq: 1.0
+
+# account_id: your-inorbit-account-id
+
+connector_config:
+  provider_name: ros2_gazebo_waffle_pi
+  backend: ros2_gazebo
+  movement_speed_mps: 0.35
+  battery_drain_per_second: 0.0005
+  charge_rate_per_second: 0.002
+  ros2:
+    enabled: true
+    pose_source: odom
+    odom_topic: /odom
+    amcl_pose_topic: /amcl_pose
+    nav2_action_name: /navigate_to_pose
+    cmd_vel_topic: /cmd_vel
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+    use_sim_time: true
+    camera_enabled: true
+    camera_id: "0"
+    camera_topic: /camera/image_raw
+    camera_rate_hz: 1.0
+    camera_scaling: 0.6
+    camera_quality: 30
+  cleaning_demo:
+    enabled: true
+    clean_water_tank: 72
+    dirty_water_tank: 35
+    detergent_tank: 58
+    cleaning_mode: eco
+    brush_status: running
+    vacuum_status: "on"
+    clean_faulting: false
+    clean_emergency_stop: false
+    cleaned_area_m2: 24.5
+
+fleet:
+  - robot_id: deliverance-turtlebot-demo-01
+    name: TurtleBot Demo 01
+    serial_number: TB3-DEMO-0001
+    mac_address: "AA:BB:CC:DD:EE:01"
+    description: TurtleBot3 Waffle Pi demo robot - RS EU office
+    online: true
+    initial_battery: 0.30
+    initial_pose:
+      x: -2.0
+      y: -0.5
+      yaw: 0.0
+    waypoints:
+      - name: home
+        x: -2.0
+        y: -0.5
+        yaw: 0.0
+      - name: station_1
+        x: 1.5
+        y: -1.0
+        yaw: 0.0
+      - name: station_2
+        x: -2.0
+        y: 2.0
+        yaw: 1.57
+      - name: charger
+        x: 2.0
+        y: 2.0
+        yaw: 3.14
