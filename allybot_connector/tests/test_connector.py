@@ -447,3 +447,64 @@ def test_time_estimate_accepts_numbers_sent_as_text_or_floats() -> None:
     ws._on_task_status(_task_status_with_estimate(1_000_000, 4.0))
     data = connector._build_mission_report(state)["data"]
     assert (data["estimated_total_time_start_min"], data["estimated_total_time_min"]) == (5, 4)
+
+
+# ---------------------------------------------------------------------------
+# Emergency stop (not verified on a real robot: see AllybotRobotState.emergency_stop)
+# ---------------------------------------------------------------------------
+
+
+def _ws_and_state(connector):
+    ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
+    ws._robot_states = connector._robot_states
+    ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    return ws, connector._robot_states[ROBOT_ID]
+
+
+def test_emergency_stop_flag_or_work_status_gives_the_emergency_mode_and_clears() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+
+    body = _device_status_body("Operating", have_task=True)
+    body["data"]["emergencyStop"] = True
+    ws._on_device_status(body)
+    assert state.emergency_stop is True
+    assert connector._compute_mission_status(state) == "Emergency"   # wins over the running task
+
+    ws._on_device_status(_device_status_body("Operating", have_task=True))       # released
+    assert state.emergency_stop is False
+    assert connector._compute_mission_status(state) == "Mission"
+
+    ws._on_device_status(_device_status_body("Emergency Stop"))                   # a work_status that says it
+    assert connector._compute_mission_status(state) == "Emergency"
+    ws._on_device_status(_device_status_body("Idle"))
+    assert connector._compute_mission_status(state) == "Idle"
+
+
+def test_a_dead_websocket_is_still_an_error_before_an_emergency() -> None:
+    connector = _make_connector()
+    state = connector._robot_states[ROBOT_ID]
+    state.emergency_stop = True
+    state.ws_connected = False
+    assert connector._compute_mission_status(state) == "Error"
+
+
+def test_ordinary_work_status_never_reads_as_an_emergency() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+    for raw, mode in (("Charging", "Charging"), ("Cargando", "Charging"), ("Idle", "Idle"),
+                      ("Operating", "Idle"), ("Returning", "Idle")):
+        ws._on_device_status(_device_status_body(raw))
+        assert state.emergency_stop is False
+        assert connector._compute_mission_status(state) == mode
+
+
+def test_an_unseen_work_status_is_logged_once(caplog) -> None:
+    connector = _make_connector()
+    ws, _ = _ws_and_state(connector)
+    AllybotAppWebSocket._unseen_work_status_logged.clear()
+    with caplog.at_level(logging.WARNING):
+        for _ in range(3):
+            ws._on_device_status(_device_status_body("Something New"))
+        ws._on_device_status(_device_status_body("Charging"))
+    assert sum("never seen before" in r.message for r in caplog.records) == 1

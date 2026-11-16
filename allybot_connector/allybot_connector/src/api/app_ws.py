@@ -336,6 +336,19 @@ class AllybotAppWebSocket:
         state.ws_connected = True
         state.last_ws_message = time.time()
 
+    _KNOWN_WORK_STATUS = {"Charging", "Idle", "Operating", "Returning"}
+    _unseen_work_status_logged: set = set()
+
+    def _note_unseen_work_status(self, work_status: str | None) -> None:
+        """Log ONCE each work_status value this connector has never seen documented.
+
+        Nothing changes in behaviour. It is how the real signal of an emergency stop (or any other state the
+        robot reports with a word of its own) shows up in the log the first time it happens, instead of the
+        robot silently reading as Idle."""
+        if work_status and work_status not in self._KNOWN_WORK_STATUS and work_status not in self._unseen_work_status_logged:
+            self._unseen_work_status_logged.add(work_status)
+            logger.warning("Allybot work_status never seen before: %r (treated as Idle)", work_status)
+
     def _on_device_status(self, body: dict) -> None:
         """Handle devicestatus — full device snapshot including battery and work_status (~1 Hz)."""
         data = body.get("data") or {}
@@ -369,6 +382,9 @@ class AllybotAppWebSocket:
                 pass
 
         state.work_status = normalize_work_status(data.get("work_status"))
+        self._note_unseen_work_status(state.work_status)
+        # Worked out on every message so it clears by itself when the robot is released.
+        state.emergency_stop = bool(data.get("emergencyStop")) or "emerg" in (state.work_status or "").casefold()
 
         # Cleaning mode + area from the data.clean sub-object (null when idle).
         clean = data.get("clean") or {}
