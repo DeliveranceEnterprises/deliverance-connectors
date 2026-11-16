@@ -1,0 +1,40 @@
+# DataSourceDefinition objects for the Ezviz camera connector.
+# Replace all placeholder scopes with your account/tag before applying.
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: ezviz-robot-model
+  scope: "tag/<ACCOUNT_ID>/<EZVIZ_TAG_ID>"
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: ezviz-online-status
+  scope: "tag/<ACCOUNT_ID>/<EZVIZ_TAG_ID>"
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: ezviz-api-connected
+  scope: "tag/<ACCOUNT_ID>/<EZVIZ_TAG_ID>"
+spec:
+  label: API Connected
+  source:
+    keyValue:
+      key: api_connected
+  timeline:
+    fieldType: boolean
