@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Preferences for the Allybot connector.
+# navigationWidget.actions whitelists which ActionDefinitions appear in the
+# native Navigation tab control widget (the LOCK / action dropdown header).
+# Without it, every account-level action with widgets:[navigation] shows up
+# as broken icons. Listing only Allybot's own actions keeps it clean.
+
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  navigationWidget:
+    actions:
+      - allybot-clean-espaitec
+      - allybot-pause-task
+      - allybot-resume-task
+      - allybot-stop-task
