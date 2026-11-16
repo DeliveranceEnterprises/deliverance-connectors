@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 
 import pytest
@@ -178,3 +179,86 @@ async def test_get_robot_info_returns_data(
     info = await client.get_robot_info(ROBOT_ID)
     assert info["robotName"] == "Cleaner-1"
     assert info["aliveStatus"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Session lost ("LOGGED IN SOMEWHERE ELSE"): commands log in again and retry once
+# ---------------------------------------------------------------------------
+
+
+_real_sleep = asyncio.sleep
+
+
+async def _instant_sleep(_delay: float, *_a, **_k) -> None:
+    await _real_sleep(0)
+
+
+def _mock_logins(httpx_mock: HTTPXMock, token: str) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/account/login",
+        json={"code": 890, "message": "success", "data": {"token": token, "openid": "oid"}},
+    )
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/user/login",
+        json={"code": 890, "message": "success", "data": {}},
+    )
+
+
+async def test_start_task_relogs_in_and_retries_when_session_was_killed(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(asyncio, "sleep", _instant_sleep)  # start_task waits 2 s for the path plan
+    _mock_logins(httpx_mock, "old-token")
+    c = AllybotAPIClient(base_url=BASE_URL, username="u", password="p", verify_ssl=False)
+    await c.login()
+
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/task/plan/reachable?robotId={ROBOT_ID}&taskId=t1&planId=",
+        json={"code": 200, "message": "success"},
+        is_reusable=True,
+    )
+    # 1st dispatch: the cloud says another login killed our session.
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/clean/default/start",
+        json={"code": 200, "message": "LOGGED IN SOMEWHERE ELSE", "data": None},
+    )
+    _mock_logins(httpx_mock, "new-token")  # the re-login
+    # 2nd dispatch, with the fresh session: accepted.
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/clean/default/start",
+        json={"code": 200, "message": "success", "data": True},
+    )
+    await c.start_task(ROBOT_ID, "t1")
+
+    assert c.mobile_token == "new-token"
+    await c.close()
+
+
+async def test_start_task_does_not_retry_on_other_rejections(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(asyncio, "sleep", _instant_sleep)
+    _mock_logins(httpx_mock, "tok")
+    c = AllybotAPIClient(base_url=BASE_URL, username="u", password="p", verify_ssl=False)
+    await c.login()
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/task/plan/reachable?robotId={ROBOT_ID}&taskId=t1&planId=",
+        json={"code": 200, "message": "success"},
+    )
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/clean/default/start",
+        json={"code": 200, "message": "Failed to start from the charging pile", "data": 1149},
+    )
+    with pytest.raises(ValueError, match="rejected by robot"):
+        await c.start_task(ROBOT_ID, "t1")
+    assert c.mobile_token == "tok"  # no re-login for an unrelated rejection
+    await c.close()
+
+
+def test_is_session_lost_detects_message_and_code() -> None:
+    from allybot_connector.src.api.client import _is_session_lost
+
+    assert _is_session_lost("LOGGED IN SOMEWHERE ELSE")
+    assert _is_session_lost("anything", 505)
+    assert not _is_session_lost("Failed to start from the charging pile", 1149)
+    assert not _is_session_lost(None)
