@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# TurtleBot ROS 2 / Gazebo / Nav2 demo configuration.
+# Copy to config/fleet.ros2.local.yaml and adjust waypoints after checking the map.
+
+location_tz: Europe/Madrid
+
+logging:
+  log_level: INFO
+
+connector_type: turtlebot
+update_freq: 1.0
+
+# account_id: your-inorbit-account-id
+
+connector_config:
+  provider_name: ros2_gazebo_turtlebot
+  backend: ros2_gazebo
+  movement_speed_mps: 0.35
+  battery_drain_per_second: 0.0005
+  charge_rate_per_second: 0.002
+  ros2:
+    enabled: true
+    pose_source: odom
+    odom_topic: /odom
+    amcl_pose_topic: /amcl_pose
+    nav2_action_name: /navigate_to_pose
+    cmd_vel_topic: /cmd_vel
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+    use_sim_time: true
+    camera_enabled: true
+    camera_id: "0"
+    camera_topic: /camera/image_raw
+    camera_rate_hz: 5.0
+    camera_scaling: 0.5
+    camera_quality: 35
+
+fleet:
+  - robot_id: turtlebot-demo-01
+    name: TurtleBot Demo 01
+    online: true
+    initial_battery: 0.92
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+    waypoints:
+      - name: home
+        x: 0.0
+        y: 0.0
+        yaw: 0.0
+      - name: station_1
+        x: 0.8
+        y: 0.0
+        yaw: 0.0
+      - name: station_2
+        x: 0.0
+        y: 0.8
+        yaw: 1.57
+      - name: charger
+        x: -0.6
+        y: 0.0
+        yaw: 3.14
