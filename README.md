@@ -52,6 +52,69 @@ See the [allybot\_connector README](allybot_connector/README.md) for setup instr
 
 ---
 
+### AutoXing
+
+The [InOrbit](https://inorbit.ai/) Fleet Connector for [AutoXing](https://www.autoxing.com/) robots.
+
+Using the AutoXing Cloud API v1.1.0, the Connector manages a fleet of AutoXing robots through a single instance. Authentication uses a dual APPCODE mechanism with a ticket exchange flow.
+
+**Capabilities:**
+- Multi-robot fleet management through a single connector instance
+- Real-time robot monitoring: pose, battery, state, velocity
+- Automatic retry logic with exponential backoff for API calls
+- Background polling architecture for efficient data fetching
+- Annotation synchronization for waypoint positions between AutoXing Cloud and InOrbit
+
+See the [autoxing\_connector README](autoxing_connector/README.md) for setup instructions.
+
+---
+
+### Ezviz
+
+The [InOrbit](https://inorbit.ai/) Connector for [Ezviz](https://www.ezviz.com/) cloud cameras.
+
+Each Ezviz camera under a configured account is reported to InOrbit as a robot, enabling unified fleet visibility alongside mobile robots.
+
+**Capabilities:**
+- Online status, battery level (where applicable), Wi-Fi signal strength
+- Firmware version and device name
+- Last motion timestamp and motion trigger state
+- Per-camera snapshot via `scripts/test_camera.py` for pre-launch credential validation
+
+See the [ezviz\_connector README](ezviz_connector/README.md) for setup instructions.
+
+---
+
+### TurtleBot Demo
+
+Demo InOrbit Edge connector for a simulated TurtleBot3 waffle\_pi robot running in Gazebo.
+
+This connector serves as a reference implementation and validation environment for the InOrbit Edge SDK. It uses a containerized ROS 2 Humble / Gazebo Classic / Nav2 stack and connects to InOrbit through the `inorbit-edge` Python SDK.
+
+**Capabilities:**
+- Pose from `/odom` or `/amcl_pose`, published to InOrbit in real time
+- Camera streaming from `/camera/image_raw` over MQTT (validated in InOrbit Navigation widget)
+- Automatic map upload to InOrbit on startup via `/map` OccupancyGrid subscription
+- Navigation actions: Go Home, Go Station 1, Go Station 2, Cancel Task (via Nav2 `NavigateToPose`)
+- Fake simulator backend for testing without ROS (`backend: fake`)
+- Office world: custom Gazebo environment with SLAM-scanned map (`office_scanned.yaml`)
+
+See the [turtlebot\_connector README](turtlebot_connector/README.md) for connector details and [docker/ros2\_gazebo README](turtlebot_connector/docker/ros2_gazebo/README.md) for the step-by-step demo workflow.
+
+---
+
+### WDC
+
+A ROS1 bridge for WDC delivery robots. Unlike the other connectors, it does not run a connector process: it republishes the telemetry of the robot as standard ROS topics and tf for an InOrbit Agent Core, and turns InOrbit robot actions into commands for the robot.
+
+**Capabilities:**
+- Laser scan, battery, map, pose and mission tracking, read locally from the API of the robot's tablet (no cloud server)
+- Robot actions: Stop, Go Charge and Go to Point (A to E and Home)
+
+See the [wdc\_robot\_sdk README](wdc_robot_sdk/README.md) for details.
+
+---
+
 ## Repository Structure
 
 ```
@@ -62,20 +125,42 @@ deliverance-connectors/
 │   ├── config/             # Configuration examples
 │   ├── docker/             # Docker packaging
 │   └── tests/
-└── allybot_connector/      # Ally Fleet Robot API connector
-    ├── allybot_connector/  # Python package
-    ├── cac/                # InOrbit Configuration-as-Code definitions
-    ├── config/             # Configuration examples
-    ├── docker/             # Docker packaging
-    └── tests/
+├── allybot_connector/      # Ally Fleet Robot API connector
+│   ├── allybot_connector/  # Python package
+│   ├── cac/                # InOrbit Configuration-as-Code definitions
+│   ├── config/             # Configuration examples
+│   ├── docker/             # Docker packaging
+│   └── tests/
+├── autoxing_connector/     # AutoXing Cloud API connector
+│   ├── autoxing_cloud_connector/ # Python package
+│   ├── cac/
+│   ├── config/
+│   ├── docker/
+│   └── tests/
+├── ezviz_connector/        # Ezviz cloud camera connector
+│   ├── ezviz_connector/    # Python package
+│   ├── cac/
+│   ├── config/
+│   └── scripts/
+├── turtlebot_connector/    # TurtleBot3 demo connector (Edge SDK + ROS 2 / Gazebo)
+│   ├── turtlebot_connector/ # Python package
+│   ├── cac/
+│   ├── config/
+│   ├── docker/
+│   │   └── ros2_gazebo/    # Containerized ROS 2 / Gazebo / Nav2 demo environment
+│   ├── office_demo/        # Gazebo office world, SLAM-scanned map, waypoints
+│   └── tests/
+└── wdc_robot_sdk/          # WDC robot bridge (ROS1 node for an InOrbit Agent Core)
+    ├── src/
+    └── cac/
 ```
 
 ## Getting Started
 
-Each connector is a standalone Python package managed with [uv](https://github.com/astral-sh/uv). To run a connector:
+Each connector, except the WDC bridge, is a standalone Python package managed with [uv](https://github.com/astral-sh/uv). To run a connector:
 
 ```bash
-cd keenon_connector          # or allybot_connector
+cd keenon_connector          # or allybot_connector, autoxing_connector, ezviz_connector
 cp config/fleet.example.yaml config/my_fleet.yaml
 cp config/example.env config/.env
 # Edit both files with your credentials and robot IDs
@@ -87,7 +172,7 @@ Refer to each connector's README for full configuration details.
 
 ## Development
 
-Both connectors follow the same development workflow:
+All connectors except the WDC bridge follow the same development workflow:
 
 ```bash
 cd keenon_connector
@@ -96,9 +181,9 @@ uv run pytest
 uv run ruff check
 ```
 
-Each connector ships with unit tests (pytest + pytest-httpx for HTTP mocking) and a ruff linting configuration. See the individual `CONTRIBUTING.md` files for contributor guidelines.
+Each connector package ships with unit tests (pytest + pytest-httpx for HTTP mocking) and a ruff linting configuration, except the Ezviz connector, which has no unit tests yet. See the individual `CONTRIBUTING.md` files for contributor guidelines.
 
-These connectors were generated from the [InOrbit Connector Cookiecutter](https://github.com/inorbit-ai/inorbit-connector-cookiecutter) and built on the [`inorbit-connector-python`](https://github.com/inorbit-ai/inorbit-connector-python) framework.
+The cloud connectors (Allybot, Keenon, AutoXing) were generated from the [InOrbit Connector Cookiecutter](https://github.com/inorbit-ai/inorbit-connector-cookiecutter) and built on the [`inorbit-connector-python`](https://github.com/inorbit-ai/inorbit-connector-python) framework.
 
 ---
 
