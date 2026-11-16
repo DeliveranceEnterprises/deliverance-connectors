@@ -318,3 +318,25 @@ def test_webhook_for_a_different_task_resets_name_and_end_time() -> None:
     state.task_name, state.task_end_ts = "kept", 9_000
     receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": 4})
     assert state.task_name == "kept" and state.task_end_ts == 9_000  # same task: untouched
+
+
+def test_emergency_stop_of_the_cleaning_module_is_its_own_mode() -> None:
+    connector = _make_connector()
+    # the e-stop wins over a running task and over the dock logic, but not over a dead API
+    assert connector._compute_mission_status(_state(clean_scram=True)) == "Emergency"
+    assert connector._compute_mission_status(
+        _state(task_status=3, clean_scram=True)) == "Emergency"
+    assert connector._compute_mission_status(
+        _state(task_status=0, charge_status=1, can_be_called=False, clean_scram=True)) == "Emergency"
+    assert connector._compute_mission_status(_state(clean_scram=True, api_connected=False)) == "Error"
+
+
+def test_no_emergency_signal_leaves_every_other_mode_as_it_was() -> None:
+    connector = _make_connector()
+    # the delivery T10 has no scram at all (None), and a released e-stop is False
+    for scram in (None, False):
+        assert connector._compute_mission_status(_state(task_status=3, clean_scram=scram)) == "Mission"
+        assert connector._compute_mission_status(
+            _state(task_status=0, charge_status=1, can_be_called=False, clean_scram=scram)) == "Charging"
+        assert connector._compute_mission_status(
+            _state(task_status=0, charge_status=0, can_be_called=True, clean_scram=scram)) == "Idle"

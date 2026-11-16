@@ -248,9 +248,15 @@ class KeenonConnector(FleetConnector):
           - canBeCalled=True  → robot is at dock and available → Idle
           - canBeCalled=False + chargeStatus=1 → at dock but unavailable → Charging
           - active task → Mission / Error
+          - emergency stop pressed → Emergency (only robots with the cleaning
+            module: the signal, globalState.scram, comes from the
+            custom/clean/robot/status endpoint; the delivery T10 has no
+            documented e-stop signal, so it never gets this mode)
         """
         if not state.api_connected:
             return "Error"
+        if state.clean_scram is True:
+            return "Emergency"
         if (
             state.task_no
             and state.task_status is not None
