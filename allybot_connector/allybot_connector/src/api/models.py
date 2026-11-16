@@ -102,6 +102,11 @@ class AllybotRobotState:
     sewage_water: float | None = None  # %
     work_status: str | None = None  # "Charging" / "Idle" / "Operating"
     have_task_running: bool | None = None
+    # Emergency stop engaged. NOT VERIFIED against a real robot: the App WS devicestatus documented
+    # for this connector carries no emergency field (emergencyStop is in the fleet WS ROBOT message,
+    # which delivers nothing today). Read from a devicestatus `emergencyStop` key or a work_status
+    # that says emergency, if the robot ever sends one; see `AllybotAppWebSocket._on_device_status`.
+    emergency_stop: bool = False
 
     # Connectivity health
     ws_connected: bool = False

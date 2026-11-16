@@ -340,6 +340,8 @@ class AllybotConnector(FleetConnector):
     def _compute_mission_status(self, state: AllybotRobotState) -> str:
         if not state.ws_connected:
             return "Error"
+        if state.emergency_stop:
+            return "Emergency"
         if state.have_task_running:
             if state.task_status_code == 9:  # Paused
                 return "Paused"
