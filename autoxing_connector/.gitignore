@@ -52,3 +52,5 @@ Thumbs.db
 *.db
 *.sqlite
 
+# Cache of the start time of each task, written by the connector at runtime
+task_start_ts_cache.json
