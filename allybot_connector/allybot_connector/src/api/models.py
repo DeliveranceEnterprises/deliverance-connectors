@@ -31,6 +31,29 @@ TASK_STATUS_MAP: dict[int, str] = {
     9: "Paused",
 }
 
+# The robot's devicestatus WS reports work_status in two languages depending on
+# which side of the Allybot cloud produced the message: seen live,
+# one ~1 Hz stream alternating "Charging" / "Cargando", "Operating" /
+# "En funcionamiento" and "Returning" / "Volviendo". Everything downstream
+# (mission_status, the InOrbit status widgets) compares against the English
+# names, so a Spanish message made a docked robot flip to "Idle".
+_WORK_STATUS_CANONICAL: dict[str, str] = {
+    "charging": "Charging",
+    "cargando": "Charging",
+    "operating": "Operating",
+    "en funcionamiento": "Operating",
+    "returning": "Returning",
+    "volviendo": "Returning",
+    "idle": "Idle",
+}
+
+
+def normalize_work_status(raw: str | None) -> str | None:
+    """Return the canonical English work_status; unknown values pass through."""
+    if not raw:
+        return raw
+    return _WORK_STATUS_CANONICAL.get(raw.strip().casefold(), raw)
+
 
 @dataclass
 class AllybotRobotState:
@@ -60,6 +83,18 @@ class AllybotRobotState:
     task_percentage: float | None = None  # 0-100
     task_status_code: int | None = None  # 3=Starting, 5=Running, 9=Paused
     task_start_ts: int | None = None  # epoch ms
+    task_end_ts: int | None = None  # epoch ms, fixed the first time the run is seen finished
+    run_seen_at: float | None = None  # time.monotonic() when the current run was first seen
+    # Cleaning report (partial — built from the data the App WS exposes; the
+    # full manufacturer report with electric/water consumption + coverage image
+    # needs the robot's cleaning-report endpoint, which is not available here).
+    cleaned_area: float | None = None  # m² cleaned (devicestasktatus.area)
+    plan_area: float | None = None     # m² total plan (devicestasktatus.msg.workingScope)
+    task_mode: str | None = None       # cleaning mode (devicestatus.data.clean.task_mode)
+    # The robot's own time estimate for the run, in whole MINUTES (devicestasktatus.msg.totalTime). It is a live projection, not a plan: measured
+    # over a real 5 min 3 s run it read 3 at 0 %, 10 at 11 %, fell to 3 at 35 %, then stayed between 4 and 5 from 50 % on and ended at 5.
+    task_estimate_start_min: int | None = None  # first estimate of the run (3 in two separate runs: looks like a default that falls short)
+    task_estimate_min: int | None = None        # latest estimate
 
     # Device status (from App WS devicestatus)
     battery: int | None = None  # 0-100
