@@ -260,3 +260,19 @@ spec:
     keyValue:
       key: clean_water_tank
   timeline: {}
+---
+# Secondary battery key published by the Keenon connector — possibly cleaning
+# module battery, distinct from the main robot battery (key: battery).
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: keenon-keenon-battery
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  label: Keenon Battery (alt)
+  unit: "%"
+  source:
+    keyValue:
+      key: keenon_battery
+  timeline:
+    fieldType: number

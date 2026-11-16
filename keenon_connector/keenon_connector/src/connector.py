@@ -79,6 +79,21 @@ class KeenonConnector(FleetConnector):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
+        if robot_id in getattr(self, "_instrumented_sessions", set()):
+            return
+        if not hasattr(self, "_instrumented_sessions"):
+            self._instrumented_sessions: set[str] = set()
+        session = self._get_robot_session(robot_id)
+        robot_cfg = self._robot_configs.get(robot_id)
+        if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
+            session.robot_name = robot_cfg.name
+            session._send_robot_status(online=True)
+            self._logger.info(
+                "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
+            )
+        self._instrumented_sessions.add(robot_id)
+
     @override
     async def _connect(self) -> None:
         cfg = self._keenon_cfg
@@ -128,6 +143,7 @@ class KeenonConnector(FleetConnector):
     @override
     async def _execution_loop(self) -> None:
         for robot_id in self.robot_ids:
+            self._instrument_robot_session_if_needed(robot_id)
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: RobotState) -> None:
@@ -206,17 +222,19 @@ class KeenonConnector(FleetConnector):
 
         self.publish_robot_key_values(robot_id, **kv)
 
-    # task_status int → mode string for the Modes & Tags widget
+    # task_status int → mode string for the Modes & Tags widget, ACTIVE tasks only.
+    # A finished task (0 failed, 4 completed, 5 cancelled) says nothing about the
+    # robot's current mode, so those fall through to the dock logic below. Before,
+    # 0 mapped to "Error" and, because task_no is kept after a task ends, one failed
+    # task left the robot showing Error until the next task was dispatched.
     _MODE_FROM_TASK_STATUS: dict[int, str] = {
         1: "Mission",   # queued
         2: "Mission",   # calling
         3: "Mission",   # in_progress
-        4: "Idle",      # completed
-        5: "Idle",      # cancelled
         6: "Mission",   # target_reached
         7: "Mission",   # waiting
-        0: "Error",     # failed
     }
+    _TERMINAL_TASK_STATUSES = frozenset({0, 4, 5})  # failed, completed, cancelled
 
     def _compute_mission_status(self, state: "RobotState") -> str:
         """Return the mode string published as the mission_status key-value.
@@ -233,7 +251,11 @@ class KeenonConnector(FleetConnector):
         """
         if not state.api_connected:
             return "Error"
-        if state.task_no and state.task_status is not None:
+        if (
+            state.task_no
+            and state.task_status is not None
+            and state.task_status not in self._TERMINAL_TASK_STATUSES
+        ):
             return self._MODE_FROM_TASK_STATUS.get(state.task_status, "Mission")
         # At dock: available = Idle, unavailable = Charging
         if state.charge_status == 1 and state.can_be_called is False:
@@ -249,26 +271,47 @@ class KeenonConnector(FleetConnector):
         5: "Canceled",    # cancelled
         6: "Executing",   # target_reached (still active)
         7: "Executing",   # waiting
+        0: "Aborted",     # failed -- was missing, so a failed task was published as
+                          # "Executing" (inProgress) forever: the ghost mission
     }
 
     def _build_mission_report(self, state: "RobotState") -> dict:
-        mission_state = self._MISSION_STATE.get(state.task_status or 0, "Executing")
+        if state.task_status is None:
+            mission_state = "Executing"  # task known but no status yet
+        else:
+            mission_state = self._MISSION_STATE.get(state.task_status, "Executing")
         in_progress = mission_state == "Executing"
+        label = state.task_name or f"Keenon task {state.task_no}"
+        group = state.task_group or "Delivery"
+        data: dict = {"group": group}
+        if state.task_report:
+            data.update({
+                "task_mileage": state.task_report.get("task_mileage"),
+                "task_mode": state.task_report.get("task_mode"),
+                "point_name": state.task_report.get("point_name"),
+                "task_state": state.task_report.get("task_state"),
+            })
+        if state.task_start_ts is None:
+            state.task_start_ts = int(time.time() * 1000)  # set once, not every publish
         report: dict = {
             "missionId": state.task_no,
             "inProgress": in_progress,
             "state": mission_state,
-            "label": f"Keenon task {state.task_no}",
-            "startTs": state.task_start_ts or int(time.time() * 1000),
-            "data": {},
+            "label": label,
+            "startTs": state.task_start_ts,
+            "data": data,
             "status": "Error" if mission_state in ("Aborted",) else "OK",
-            "tasks": [{"taskId": "0", "label": "Delivery"}],
+            "tasks": [{"taskId": "0", "label": group}],
             "completedPercent": 1.0 if mission_state == "Completed" else 0.0,
         }
         if in_progress:
             report["currentTaskId"] = "0"
         else:
-            report["endTs"] = int(time.time() * 1000)
+            # Fixed the first time the task is seen finished. It used to be "now" on
+            # every publish, so a finished mission's end time kept moving forward.
+            if state.task_end_ts is None:
+                state.task_end_ts = int(time.time() * 1000)
+            report["endTs"] = state.task_end_ts
         return report
 
     # ------------------------------------------------------------------
@@ -309,6 +352,12 @@ class KeenonConnector(FleetConnector):
                 state.task_no = task_no
                 state.task_status = 1  # queued
                 state.task_start_ts = int(time.time() * 1000)
+                state.task_end_ts = None
+                state.task_name = cmd.label or None
+                state.task_group = cmd.group or None
+                state.task_report = None
+                state.task_report_attempts = 0
+                state.task_report_last_attempt = 0.0
 
             case CustomScripts.RETURN_TO_ORIGIN:
                 task_no = await self._api_client.return_to_origin(
@@ -318,6 +367,12 @@ class KeenonConnector(FleetConnector):
                 state.task_no = task_no
                 state.task_status = 1
                 state.task_start_ts = int(time.time() * 1000)
+                state.task_end_ts = None
+                state.task_name = "Return to Origin"
+                state.task_group = "Delivery"
+                state.task_report = None
+                state.task_report_attempts = 0
+                state.task_report_last_attempt = 0.0
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)

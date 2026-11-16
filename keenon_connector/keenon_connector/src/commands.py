@@ -33,6 +33,8 @@ class CallToPointCommand(ExcludeUnsetMixin, CommandModel):
     point_uuid: str
     point_id: str
     scene_code: str | None = None
+    label: str = ""    # action label from InOrbit (e.g. "Send to Mesa 1")
+    group: str = ""    # action group (e.g. "Delivery")
 
 
 class CancelTaskCommand(ExcludeUnsetMixin, CommandModel):

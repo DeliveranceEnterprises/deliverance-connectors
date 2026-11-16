@@ -6,6 +6,7 @@
 
 import logging
 import math
+import time
 
 from aiohttp import web
 
@@ -155,7 +156,14 @@ class KeenonWebhookReceiver:
         sn = body.get("robotSn", "")
         state = self._state_for_sn(sn)
         if state:
-            state.task_no = body.get("taskNo")
+            new_no = body.get("taskNo")
+            if new_no != state.task_no:
+                # A different task (e.g. started on the robot itself): its own end
+                # time, and drop the previous task's label/start so they don't leak.
+                state.task_end_ts = None
+                state.task_name = None
+                state.task_start_ts = int(time.time() * 1000)
+            state.task_no = new_no
             state.task_status = body.get("taskState")
 
     def _on_clean_status(self, body: dict) -> None:

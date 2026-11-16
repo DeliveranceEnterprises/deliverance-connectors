@@ -22,10 +22,13 @@ class KeenonRobotConfig(RobotConfig):
         robot_id: InOrbit robot ID.
         fleet_robot_id: Keenon robot MAC address (e.g. ``AA:BB:CC:DD:EE:FF``).
         store_id: Keenon store ID the robot belongs to (e.g. ``S00000001``).
+        name: Display name shown in InOrbit Fleet Status. Optional; if set,
+            overrides the default robot_id that the framework publishes.
     """
 
     fleet_robot_id: str  # MAC address format
     store_id: str
+    name: str | None = None
 
 
 class KeenonConfig(BaseSettings):
