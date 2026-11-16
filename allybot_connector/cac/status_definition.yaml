@@ -16,3 +16,20 @@ spec:
       params:
         - false
       status: ERROR
+---
+# battery (0–1), no scale — thresholds in 0–1
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: allybot-battery
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  rules:
+    - function: BELOW
+      params:
+        - 0.15
+      status: ERROR
+    - function: BELOW
+      params:
+        - 0.30
+      status: WARNING

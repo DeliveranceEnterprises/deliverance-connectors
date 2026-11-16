@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# SpatialAnnotation for the Allybot charging station in RS EU location.
+# Coordinates captured from the robot pose while docked and charging.
+# SpatialAnnotation requires a location-type tag — RS EU (hSTlpyR8qtgjSfcT)
+# is the physical location where this connector operates.
+
+apiVersion: v0.1
+kind: SpatialAnnotation
+metadata:
+  id: allybot-cs
+  scope: tag/rnLasGAxn5CP7bj32/hSTlpyR8qtgjSfcT
+spec:
+  type: waypoint
+  frameId: map
+  label: Allybot Charging Station
+  data:
+    x: 4.049
+    y: 0.035
+    theta: -1.614
