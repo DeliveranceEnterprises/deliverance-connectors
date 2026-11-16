@@ -32,3 +32,27 @@ spec:
       params:
         - false
       status: ERROR
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: keenon-clean-faulting
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - true
+      status: ERROR
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: keenon-clean-emergency-stop
+  scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - true
+      status: ERROR
