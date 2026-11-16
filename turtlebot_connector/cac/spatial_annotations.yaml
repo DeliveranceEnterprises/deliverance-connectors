@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# SpatialAnnotation waypoints for the TurtleBot demo.
+# Coordinates mirror the local fleet YAML (config/fleet.ros2.office.local.yaml),
+# in the same frame_id=map used by the connector when publishing pose. IDs are
+# prefixed with "turtlebot-" to avoid collisions with other robots' waypoints
+# at the same location.
+
+apiVersion: v0.1
+kind: SpatialAnnotation
+metadata:
+  id: turtlebot-home
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  type: waypoint
+  frameId: map
+  label: TurtleBot Home
+  data:
+    x: -2.0
+    y: -0.5
+    theta: 0.0
+---
+apiVersion: v0.1
+kind: SpatialAnnotation
+metadata:
+  id: turtlebot-station-1
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  type: waypoint
+  frameId: map
+  label: TurtleBot Station 1
+  data:
+    x: 1.5
+    y: -1.0
+    theta: 0.0
+---
+apiVersion: v0.1
+kind: SpatialAnnotation
+metadata:
+  id: turtlebot-station-2
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  type: waypoint
+  frameId: map
+  label: TurtleBot Station 2
+  data:
+    x: -2.0
+    y: 2.0
+    theta: 1.57

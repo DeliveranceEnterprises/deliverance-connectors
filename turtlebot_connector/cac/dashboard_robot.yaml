@@ -1,0 +1,112 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Custom "TurtleBot Robot" dashboard for the cleaning demo.
+# Conditional on the TurtleBot Cleaning tag — the whole dashboard only appears
+# for robots that have that tag, demonstrating tag-based UI variation.
+#
+# Does not replace the global Robot dashboard. Reuses existing TurtleBot actions
+# from the TurtleBot tag without duplicating them.
+
+apiVersion: v0.1
+kind: DashboardDefinition
+metadata:
+  id: turtlebot-robot-cleaning
+  scope: account/<ACCOUNT_ID>
+spec:
+  label: TurtleBot Robot
+  sections:
+    - conditional:
+        tags:
+          - <TURTLEBOT_CLEANING_TAG_ID>
+      label: Fleet Status
+      scope: fleet
+      widgets:
+        - config:
+            statuses:
+              - id: turtlebot-battery
+              - id: turtlebot-clean-water-tank
+              - id: turtlebot-dirty-water-tank
+              - id: turtlebot-clean-emergency-stop
+          label: Cleaning Robot Status
+          layout:
+            grid: 12
+            height: 1
+          type: fleetStatus
+        - label: Cleaning Incidents
+          layout:
+            grid: 12
+            height: 2
+          type: incidentList
+    - conditional:
+        tags:
+          - <TURTLEBOT_CLEANING_TAG_ID>
+      label: Vitals
+      scope: robot
+      widgets:
+        - config:
+            dataSources:
+              - id: turtlebot-battery
+                label: Battery
+                type: gauge
+                unit: "%"
+          label: Battery
+          layout:
+            chroma: true
+            grid: 4
+            height: 1
+          type: vitals
+        - label: Modes and Tags
+          layout:
+            chroma: true
+            grid: 4
+            height: 1
+          type: tagsAndModes
+        - label: Audit Log
+          layout:
+            chroma: true
+            grid: 4
+            height: 1
+          type: auditLog
+    - conditional:
+        tags:
+          - <TURTLEBOT_CLEANING_TAG_ID>
+      label: Cleaning Status
+      scope: robot
+      widgets:
+        - config:
+            dataSources:
+              - id: turtlebot-clean-water-tank
+                label: Clean Water
+                type: gauge
+                unit: "%"
+              - id: turtlebot-dirty-water-tank
+                label: Dirty Water
+                type: gauge
+                unit: "%"
+              - id: turtlebot-detergent-tank
+                label: Detergent
+                type: gauge
+                unit: "%"
+          label: Tanks
+          layout:
+            chroma: true
+            grid: 8
+            height: 1
+          type: vitals
+        - config:
+            actionIds:
+              - turtlebot-go-home
+              - turtlebot-go-station-1
+              - turtlebot-go-station-2
+              - turtlebot-cancel-task
+              - turtlebot-dispatch-demo-route
+            bigButtons: true
+            expanded: true
+          label: TurtleBot Actions
+          layout:
+            chroma: true
+            grid: 4
+            height: 1
+          type: actionsWidget

@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Cleaning-robot demo data sources for the TurtleBot.
+# Scope: tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID> ("TurtleBot Cleaning",
+# collection "Other"). Pure demo overlay — does not affect the base TurtleBot
+# tag configuration.
+#
+# Tank fields use scale: 1 + unit: "%" because the connector publishes them
+# already as 0-100 percent values (Otto100 pattern, avoids the 2000% bug).
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-clean-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Clean Water Tank
+  scale: 0.01
+  unit: "%"
+  source:
+    keyValue:
+      key: clean_water_tank
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-dirty-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Dirty Water Tank
+  scale: 0.01
+  unit: "%"
+  source:
+    keyValue:
+      key: dirty_water_tank
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-detergent-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Detergent Tank
+  scale: 0.01
+  unit: "%"
+  source:
+    keyValue:
+      key: detergent_tank
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-cleaning-mode
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Cleaning Mode
+  source:
+    keyValue:
+      key: cleaning_mode
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-brush-status
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Brush Status
+  source:
+    keyValue:
+      key: brush_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-vacuum-status
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Vacuum Status
+  source:
+    keyValue:
+      key: vacuum_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-clean-faulting
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Fault
+  source:
+    keyValue:
+      key: clean_faulting
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-clean-emergency-stop
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Emergency Stop
+  source:
+    keyValue:
+      key: clean_emergency_stop
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-cleaned-area
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  label: Cleaned Area
+  unit: "m²"
+  source:
+    keyValue:
+      key: cleaned_area_m2
+  timeline:
+    fieldType: number

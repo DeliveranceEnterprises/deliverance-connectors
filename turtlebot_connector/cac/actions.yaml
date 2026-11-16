@@ -1,0 +1,129 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# ActionDefinition objects for the TurtleBot demo connector.
+# Scope must be tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID> — NOT robot/... — so that
+# withControlWidget: true on the navigation section filters correctly by tag.
+# Replace placeholders before applying.
+
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-home
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Home
+  group: TurtleBot Demo
+  description: Send the TurtleBot to the home waypoint.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: home
+    - name: label
+      type: string
+      value: Go Home
+    - name: group
+      type: string
+      value: TurtleBot Demo
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-station-1
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Station 1
+  group: TurtleBot Demo
+  description: Send the TurtleBot to station_1.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: station_1
+    - name: label
+      type: string
+      value: Go Station 1
+    - name: group
+      type: string
+      value: TurtleBot Demo
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-go-station-2
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  type: RunScript
+  label: Go Station 2
+  group: TurtleBot Demo
+  description: Send the TurtleBot to station_2.
+  widgets: ["navigation"]
+  confirmation:
+    required: false
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: go_to
+    - name: waypoint
+      type: string
+      value: station_2
+    - name: label
+      type: string
+      value: Go Station 2
+    - name: group
+      type: string
+      value: TurtleBot Demo
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-cancel-task
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  type: RunScript
+  label: Cancel Task
+  group: TurtleBot Demo
+  description: Cancel the active TurtleBot navigation task.
+  widgets: ["navigation"]
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: filename
+      type: string
+      value: cancel_task
+---
+apiVersion: v0.1
+kind: ActionDefinition
+metadata:
+  id: turtlebot-dispatch-demo-route
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  type: DispatchMission
+  label: Start Demo Route
+  group: TurtleBot Demo
+  description: Run the TurtleBot demo route mission (Station 1 → Station 2 → Home).
+  confirmation:
+    required: true
+  lock: false
+  arguments:
+    - name: missionDefinitionId
+      type: string
+      value: turtlebot-demo-route
