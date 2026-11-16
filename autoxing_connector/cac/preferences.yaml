@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Preferences for the Autoxing connector.
+# navigationWidget.actions whitelists which ActionDefinitions appear in the
+# native Navigation tab control widget (the LOCK / action dropdown header).
+
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: tag/rnLasGAxn5CP7bj32/8gMbOLofiZYK0uKx
+spec:
+  navigationWidget:
+    actions:
+      - autoxing-go-to-a
+      - autoxing-go-to-b
+      - autoxing-go-to-home
+      - autoxing-go-home
+      - autoxing-cancel-task
