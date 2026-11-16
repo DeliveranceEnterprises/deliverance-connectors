@@ -208,7 +208,9 @@ class AutoxingCloudConnector(FleetConnector):
         if not state.api_connected:
             return "Error"
         if state.is_emergency_stop:
-            return "Error"
+            # Its own mode, not "Error": the platform treats an emergency stop as a stop and not as a breakdown
+            # (KPIs), and "Error" here would reach it as a breakdown.
+            return "Emergency"
         if state.is_manual_mode:
             return "Manual"
         if state.task_id and not state.task_is_finish and not state.task_is_cancel:
