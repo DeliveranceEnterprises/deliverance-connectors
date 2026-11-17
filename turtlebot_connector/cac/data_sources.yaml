@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# DataSourceDefinition objects for the TurtleBot demo connector.
+# Replace all placeholder scopes with your account/tag before applying.
+
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-battery
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Battery
+  unit: "%"
+  scale: 0.01
+  source:
+    keyValue:
+      key: battery_percent
+  timeline:
+    fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-online-status
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Online
+  source:
+    keyValue:
+      key: online_status
+  timeline:
+    fieldType: boolean
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-operational-state
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Operational State
+  source:
+    keyValue:
+      key: operational_state
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-current-waypoint
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Current Waypoint
+  source:
+    keyValue:
+      key: current_waypoint
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: mission_status
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Mission Status
+  source:
+    keyValue:
+      key: mission_status
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-description
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Description
+  source:
+    keyValue:
+      key: description
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-serial-number
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Serial Number
+  source:
+    keyValue:
+      key: serial_number
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-mac-address
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: MAC Address
+  source:
+    keyValue:
+      key: mac_address
+  timeline: {}
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: turtlebot-robot-model
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>"
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}
