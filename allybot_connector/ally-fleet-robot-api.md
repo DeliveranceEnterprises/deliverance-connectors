@@ -1389,8 +1389,8 @@ Three WebSocket sources exist, in priority order:
 curl -X POST http://116.205.178.152:28080/fleetapi/account/login \
   -H "X-Api-Version: 184" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=DeliveranceENT&password=QWRtaW4xMjM="
-# QWRtaW4xMjM= = base64("Admin123")
+  -d "username=DeliveranceENT&password=<base64-encoded-password>"
+# <base64-encoded-password> = base64("<your-password>")
 ```
 
 Response includes `data.token` and `data.openid`.
