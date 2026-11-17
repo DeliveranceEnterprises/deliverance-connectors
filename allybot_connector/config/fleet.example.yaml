@@ -22,7 +22,7 @@ connector_config:
   base_url: http://116.205.178.152:28080
   # Store password in config/.env as INORBIT_ALLYBOT_PASSWORD
   username: DeliveranceENT
-  # password: Admin123
+  # password: <your-password>
 
 fleet:
   - robot_id: allybot-cleaner-1

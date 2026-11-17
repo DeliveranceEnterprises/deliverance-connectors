@@ -818,7 +818,7 @@ curl -X POST \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "id=6d70603da0cb3d00ba104a191770170b&page=1&pageSize=20&type=0&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
+  -d "id=6d70603da0cb3d00ba104a191770170b&page=1&pageSize=20&type=0&openid=72426fd7de4cb929dc2645378fc4e7dd&token=<token>" \
   "http://116.205.178.152:28080/fleetapi/clean/list"
 ```
 
@@ -946,7 +946,7 @@ curl -X POST \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "id=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747&reachChargePoint=false&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
+  -d "id=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747&reachChargePoint=false&openid=72426fd7de4cb929dc2645378fc4e7dd&token=<token>" \
   "http://116.205.178.152:28080/fleetapi/clean/default/start"
 ```
 
@@ -1053,7 +1053,7 @@ curl -X POST \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=1"
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=1"
 ```
 
 **Example — Resume (`type=0`):**
@@ -1067,7 +1067,7 @@ curl -X POST \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=0"
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=0"
 ```
 
 **Example — Cancel / Stop (`type=2`):**
@@ -1081,7 +1081,7 @@ curl -X POST \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=2"
+  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=2"
 ```
 
 **Response (all three actions):**
@@ -1389,8 +1389,8 @@ Three WebSocket sources exist, in priority order:
 curl -X POST http://116.205.178.152:28080/fleetapi/account/login \
   -H "X-Api-Version: 184" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=DeliveranceENT&password=QWRtaW4xMjM="
-# QWRtaW4xMjM= = base64("Admin123")
+  -d "username=DeliveranceENT&password=<base64-encoded-password>"
+# <base64-encoded-password> = base64("<your-password>")
 ```
 
 Response includes `data.token` and `data.openid`.
