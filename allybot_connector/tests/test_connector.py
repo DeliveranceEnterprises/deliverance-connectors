@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import time
@@ -263,3 +264,247 @@ def test_app_ws_pong_does_not_update_state() -> None:
     )
     ws._dispatch(json.dumps({"type": "pong"}))
     assert robot_states[ROBOT_ID].ws_connected is False  # unchanged
+
+
+# ---------------------------------------------------------------------------
+# Language-independent work_status / mode (seen live: "Charging" <-> "Cargando")
+# ---------------------------------------------------------------------------
+
+
+def _device_status_body(work_status: str, have_task: bool = False) -> dict:
+    return {"data": {"id": SERIAL, "battery": 100, "work_status": work_status,
+                     "haveTaskRunning": have_task}}
+
+
+def test_spanish_work_status_is_normalised_and_keeps_mode_charging() -> None:
+    connector = _make_connector()
+    ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
+    ws._robot_states = connector._robot_states
+    ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    state = connector._robot_states[ROBOT_ID]
+
+    for raw in ("Charging", "Cargando", "CARGANDO", "Charging"):
+        ws._on_device_status(_device_status_body(raw))
+        assert state.work_status == "Charging"
+        assert connector._compute_mission_status(state) == "Charging"
+
+
+def test_normalize_work_status_maps_known_pairs_and_passes_unknown() -> None:
+    from allybot_connector.src.api.models import normalize_work_status
+
+    assert normalize_work_status("En funcionamiento") == "Operating"
+    assert normalize_work_status("Volviendo") == "Returning"
+    assert normalize_work_status("Algo nuevo") == "Algo nuevo"
+    assert normalize_work_status(None) is None
+
+
+# ---------------------------------------------------------------------------
+# Each run gets its own startTs / missionId and a fixed end time
+# ---------------------------------------------------------------------------
+
+
+def _ws_for(connector: AllybotConnector) -> AllybotAppWebSocket:
+    ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
+    ws._robot_states = connector._robot_states
+    ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    return ws
+
+
+def _task_status_body(start_ms: int) -> dict:
+    return {"robotid": SERIAL, "taskId": "task-A", "name": "Hotel_Hospital",
+            "taskStatus": 5, "percent": 10, "msg": json.dumps({"startTime": start_ms})}
+
+
+def test_second_run_gets_its_own_start_and_mission_id() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_body(1_000_000))
+    first = connector._build_mission_report(state)
+    assert first["startTs"] == 1_000_000
+    assert first["missionId"] == "task-A_1000000"
+
+    ws._on_device_status(_device_status_body("Charging", have_task=False))  # run 1 ends
+    ws._on_device_status(_device_status_body("Operating", have_task=True))  # run 2 begins
+    assert state.task_start_ts is None  # reset, not inherited from run 1
+    ws._on_task_status(_task_status_body(2_000_000))
+    second = connector._build_mission_report(state)
+    assert second["startTs"] == 2_000_000
+    assert second["missionId"] == "task-A_2000000"
+
+
+def test_finished_mission_keeps_a_fixed_end_and_stops_being_republished() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_body(1_000_000))
+    ws._on_device_status(_device_status_body("Charging", have_task=False))
+
+    r1 = connector._build_mission_report(state)
+    end_1 = r1["endTs"]
+    assert r1["state"] == "Completed" and r1["inProgress"] is False
+    time.sleep(0.01)
+    assert connector._build_mission_report(state)["endTs"] == end_1  # does not creep
+
+    state.task_end_ts -= 61_000  # a minute later
+    assert connector._build_mission_report(state) is None  # no longer republished
+
+
+def test_new_run_waits_for_robot_start_time_then_falls_back() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    state.task_id = "task-A"
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    assert connector._build_mission_report(state) is None  # inside the grace window
+
+    state.run_seen_at -= 10.0  # grace elapsed without a robot startTime
+    report = connector._build_mission_report(state)
+    assert report is not None and report["startTs"] == state.task_start_ts
+    assert connector._build_mission_report(state)["startTs"] == report["startTs"]  # stable
+
+
+def test_dispatched_task_is_not_published_until_robot_reports_running() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+
+    # start_task just returned OK: task_id set, robot not yet running
+    state.task_id, state.task_status_code = "task-A", 3
+    assert connector._build_mission_report(state) is None
+
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_body(1_000_000))
+    report = connector._build_mission_report(state)
+    assert report is not None and report["missionId"] == "task-A_1000000"
+
+
+# ---------------------------------------------------------------------------
+# The robot's own time estimate (whole minutes) is published, and its first value is kept
+# ---------------------------------------------------------------------------
+
+
+def _task_status_with_estimate(start_ms: int, total: object, **inner_extra: object) -> dict:
+    inner: dict = {"startTime": start_ms, **inner_extra}
+    if total is not None:
+        inner["totalTime"] = total
+    return {"robotid": SERIAL, "taskId": "task-A", "name": "Espaitec",
+            "taskStatus": 5, "percent": 10, "msg": json.dumps(inner)}
+
+
+def test_time_estimate_is_published_with_its_first_value_kept() -> None:
+    """The sequence the robot really sent (a 5 min 3 s run): 3 at the start, 10 at 11 %, a dip to 3, settling at 5."""
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    for total in [3, 10, 3, 6, 5]:
+        ws._on_task_status(_task_status_with_estimate(1_000_000, total))
+    data = connector._build_mission_report(state)["data"]
+    assert data["estimated_total_time_start_min"] == 3   # fixed for the run
+    assert data["estimated_total_time_min"] == 5         # the latest
+    assert "working_time_min" not in data                # the report already carries the real duration
+
+
+def test_time_estimate_starts_over_with_each_run() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_with_estimate(1_000_000, 3))
+    ws._on_task_status(_task_status_with_estimate(1_000_000, 5))
+
+    ws._on_device_status(_device_status_body("Charging", have_task=False))  # run 1 ends
+    ws._on_device_status(_device_status_body("Operating", have_task=True))  # run 2 begins
+    assert (state.task_estimate_start_min, state.task_estimate_min) == (None, None)
+    ws._on_task_status(_task_status_with_estimate(2_000_000, 4))
+    data = connector._build_mission_report(state)["data"]
+    assert data["estimated_total_time_start_min"] == 4   # not run 1's 3
+    assert data["estimated_total_time_min"] == 4
+
+
+@pytest.mark.parametrize("bad", ["abc", True, -1, [3], {"a": 1}])
+def test_unreadable_time_estimate_is_left_out_and_does_not_cost_the_area(bad: object) -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_with_estimate(1_000_000, bad, workingScope=16.0))
+    data = connector._build_mission_report(state)["data"]
+    assert "estimated_total_time_start_min" not in data and "estimated_total_time_min" not in data
+    assert data["plan_area"] == 16.0   # the area in the same message is still read
+
+
+def test_time_estimate_accepts_numbers_sent_as_text_or_floats() -> None:
+    connector = _make_connector()
+    ws = _ws_for(connector)
+    state = connector._robot_states[ROBOT_ID]
+    ws._on_device_status(_device_status_body("Operating", have_task=True))
+    ws._on_task_status(_task_status_with_estimate(1_000_000, "5"))
+    ws._on_task_status(_task_status_with_estimate(1_000_000, 4.0))
+    data = connector._build_mission_report(state)["data"]
+    assert (data["estimated_total_time_start_min"], data["estimated_total_time_min"]) == (5, 4)
+
+
+# ---------------------------------------------------------------------------
+# Emergency stop (not verified on a real robot: see AllybotRobotState.emergency_stop)
+# ---------------------------------------------------------------------------
+
+
+def _ws_and_state(connector):
+    ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
+    ws._robot_states = connector._robot_states
+    ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    return ws, connector._robot_states[ROBOT_ID]
+
+
+def test_emergency_stop_flag_or_work_status_gives_the_emergency_mode_and_clears() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+
+    body = _device_status_body("Operating", have_task=True)
+    body["data"]["emergencyStop"] = True
+    ws._on_device_status(body)
+    assert state.emergency_stop is True
+    assert connector._compute_mission_status(state) == "Emergency"   # wins over the running task
+
+    ws._on_device_status(_device_status_body("Operating", have_task=True))       # released
+    assert state.emergency_stop is False
+    assert connector._compute_mission_status(state) == "Mission"
+
+    ws._on_device_status(_device_status_body("Emergency Stop"))                   # a work_status that says it
+    assert connector._compute_mission_status(state) == "Emergency"
+    ws._on_device_status(_device_status_body("Idle"))
+    assert connector._compute_mission_status(state) == "Idle"
+
+
+def test_a_dead_websocket_is_still_an_error_before_an_emergency() -> None:
+    connector = _make_connector()
+    state = connector._robot_states[ROBOT_ID]
+    state.emergency_stop = True
+    state.ws_connected = False
+    assert connector._compute_mission_status(state) == "Error"
+
+
+def test_ordinary_work_status_never_reads_as_an_emergency() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+    for raw, mode in (("Charging", "Charging"), ("Cargando", "Charging"), ("Idle", "Idle"),
+                      ("Operating", "Idle"), ("Returning", "Idle")):
+        ws._on_device_status(_device_status_body(raw))
+        assert state.emergency_stop is False
+        assert connector._compute_mission_status(state) == mode
+
+
+def test_an_unseen_work_status_is_logged_once(caplog) -> None:
+    connector = _make_connector()
+    ws, _ = _ws_and_state(connector)
+    AllybotAppWebSocket._unseen_work_status_logged.clear()
+    with caplog.at_level(logging.WARNING):
+        for _ in range(3):
+            ws._on_device_status(_device_status_body("Something New"))
+        ws._on_device_status(_device_status_body("Charging"))
+    assert sum("never seen before" in r.message for r in caplog.records) == 1

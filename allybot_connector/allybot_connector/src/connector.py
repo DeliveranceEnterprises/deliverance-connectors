@@ -28,7 +28,6 @@ _WS_TIMEOUT_S = 60.0
 # How often to refresh robot metadata and map info via REST.
 _METADATA_POLL_INTERVAL_S = 60.0
 
-
 class AllybotConnector(FleetConnector):
     """InOrbit Fleet Connector for the Ally Fleet Robot API.
 
@@ -82,13 +81,7 @@ class AllybotConnector(FleetConnector):
         if not self._api_client.mobile_token or not self._api_client.openid:
             raise RuntimeError("Mobile login did not return a usable token — cannot connect App WS")
 
-        self._app_ws = AllybotAppWebSocket(
-            base_url=cfg.base_url,
-            openid=self._api_client.openid,
-            token=self._api_client.mobile_token,
-            robot_states=self._robot_states,
-            fleet_serial_to_robot_id=self._fleet_serial_to_robot_id,
-        )
+        self._app_ws = self._build_app_ws()
         self._app_ws.start()
 
         # Seed metadata immediately, then refresh on a background task.
@@ -98,6 +91,24 @@ class AllybotConnector(FleetConnector):
         )
 
         self._logger.info("Connected to Allybot fleet at %s", cfg.base_url)
+
+    def _build_app_ws(self) -> AllybotAppWebSocket:
+        """The telemetry WebSocket, wired to log in again before each reconnect.
+
+        Telemetry (position, battery, status, task progress, water) comes ONLY from the
+        WebSocket, which keeps delivering after another login invalidates the REST
+        session. REST is used for commands, which log in once more when they need to
+        (``AllybotAPIClient._with_relogin``). The first connection uses the token that
+        ``_connect`` just obtained; every later one asks the client for a fresh one.
+        """
+        return AllybotAppWebSocket(
+            base_url=self._allybot_cfg.base_url,
+            openid=self._api_client.openid,
+            token=self._api_client.mobile_token,
+            robot_states=self._robot_states,
+            fleet_serial_to_robot_id=self._fleet_serial_to_robot_id,
+            relogin=self._api_client.refresh_session,
+        )
 
     @override
     async def _disconnect(self) -> None:
@@ -153,9 +164,25 @@ class AllybotConnector(FleetConnector):
     # Execution loop
     # ------------------------------------------------------------------
 
+    def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
+        if robot_id in getattr(self, "_instrumented_sessions", set()):
+            return
+        if not hasattr(self, "_instrumented_sessions"):
+            self._instrumented_sessions: set[str] = set()
+        session = self._get_robot_session(robot_id)
+        robot_cfg = self._robot_configs.get(robot_id)
+        if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
+            session.robot_name = robot_cfg.name
+            session._send_robot_status(online=True)
+            self._logger.info(
+                "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
+            )
+        self._instrumented_sessions.add(robot_id)
+
     @override
     async def _execution_loop(self) -> None:
         for robot_id in self.robot_ids:
+            self._instrument_robot_session_if_needed(robot_id)
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: AllybotRobotState) -> None:
@@ -170,9 +197,11 @@ class AllybotConnector(FleetConnector):
             if state.speed is not None:
                 self.publish_robot_odometry(robot_id, linear_speed=state.speed)
 
+        robot_cfg = self._robot_configs.get(robot_id)
         kv: dict = {
             "connector_version": connector_version,
             "ws_connected": state.ws_connected,
+            "robot_model": robot_cfg.robot_model if robot_cfg else "C2",
         }
 
         if state.speed is not None:
@@ -211,7 +240,9 @@ class AllybotConnector(FleetConnector):
         kv["mission_status"] = self._compute_mission_status(state)
 
         if state.task_id:
-            kv["mission_tracking"] = self._build_mission_report(state)
+            report = self._build_mission_report(state)
+            if report is not None:
+                kv["mission_tracking"] = report
 
         self.publish_robot_key_values(robot_id, **kv)
 
@@ -224,29 +255,93 @@ class AllybotConnector(FleetConnector):
         None: "Completed",  # WS stream stopped → natural completion
     }
 
-    def _build_mission_report(self, state: AllybotRobotState) -> dict:
+    # A new run waits this long for the robot's own startTime (it arrives in the
+    # devicestasktatus WS stream) before falling back to the connector's clock.
+    _START_TS_GRACE_S = 5.0
+    # After a run finishes its final report is republished for this long, then
+    # dropped: InOrbit keeps the last mission_tracking value, and republishing
+    # it every second with endTs=now made the finished mission's end time creep
+    # forward for hours (seen live).
+    _FINAL_REPORT_WINDOW_S = 60.0
+
+    def _build_mission_report(self, state: AllybotRobotState) -> dict | None:
+        """Mission report for the current run, or None when nothing should be published."""
         mission_state = self._MISSION_STATE.get(state.task_status_code, "Completed")
         in_progress = state.have_task_running or False
+        now_ms = int(time.time() * 1000)
+
+        if not in_progress and state.run_seen_at is None:
+            # The task was dispatched (start_task returned OK) but the robot has not
+            # reported it running yet. Publishing now would invent a mission with the
+            # dispatch time as both start and end (seen live).
+            return None
+
+        if state.task_start_ts is None:
+            waiting = (
+                in_progress
+                and state.run_seen_at is not None
+                and time.monotonic() - state.run_seen_at < self._START_TS_GRACE_S
+            )
+            if waiting:
+                return None
+            state.task_start_ts = now_ms  # stable fallback: set once, not every cycle
+
+        if not in_progress:
+            if state.task_end_ts is None:
+                state.task_end_ts = now_ms
+            if now_ms - state.task_end_ts > self._FINAL_REPORT_WINDOW_S * 1000:
+                return None
+        # Partial cleaning report - only the fields the App WS exposes.  These
+        # ride along in mission_tracking.data and InOrbit prefixes them with
+        # "data_" in kpis/objects, where the Deliverance mapper rebuilds them
+        # into the cleaningStats report.  Electric/water consumption, effect and
+        # the coverage image need the robot's cleaning-report endpoint (TODO).
+        data: dict = {"group": "Cleaning"}
+        if state.plan_area is not None:
+            data["plan_area"] = state.plan_area
+        if state.cleaned_area is not None:
+            data["cleaned_area"] = state.cleaned_area
+        if state.task_percentage is not None:
+            data["progress_percent"] = state.task_percentage
+        if state.fresh_water is not None:
+            data["fresh_water"] = state.fresh_water
+        if state.sewage_water is not None:
+            data["sewage_water"] = state.sewage_water
+        if state.task_mode:
+            data["task_mode"] = state.task_mode
+        # The robot's time estimate in minutes (see AllybotRobotState). Both the first and the latest are sent: the first is fixed for the run, the latest
+        # keeps moving until the run is well on its way.
+        if state.task_estimate_start_min is not None:
+            data["estimated_total_time_start_min"] = state.task_estimate_start_min
+        if state.task_estimate_min is not None:
+            data["estimated_total_time_min"] = state.task_estimate_min
+        start_ts = state.task_start_ts
+        # Suffix with startTs so each cleaning run gets a unique missionId.
+        # Without this InOrbit deduplicates by missionId and overwrites the
+        # same 2 entries instead of creating a new one per run.
+        mission_id = f"{state.task_id}_{start_ts}" if state.task_id else None
         report: dict = {
-            "missionId": state.task_id,
+            "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
             "label": state.task_name or state.task_id,
-            "startTs": state.task_start_ts or int(time.time() * 1000),
-            "data": {},
+            "startTs": start_ts,
+            "data": data,
             "status": "OK",
-            "tasks": [{"taskId": "0", "label": state.task_name or "Cleaning"}],
+            "tasks": [{"taskId": "0", "label": "Cleaning"}],
             "completedPercent": (state.task_percentage or 0.0) / 100.0,
         }
         if in_progress:
             report["currentTaskId"] = "0"
         else:
-            report["endTs"] = int(time.time() * 1000)
+            report["endTs"] = state.task_end_ts
         return report
 
     def _compute_mission_status(self, state: AllybotRobotState) -> str:
         if not state.ws_connected:
             return "Error"
+        if state.emergency_stop:
+            return "Emergency"
         if state.have_task_running:
             if state.task_status_code == 9:  # Paused
                 return "Paused"
@@ -328,6 +423,11 @@ class AllybotConnector(FleetConnector):
                 )
                 state.task_id = cmd.task_id
                 state.task_status_code = 3  # Starting
+                # A new run: forget the previous run's timing so its final report is
+                # not republished and the new one waits for the robot to report it.
+                state.task_start_ts = None
+                state.task_end_ts = None
+                state.run_seen_at = None
 
             case CustomScripts.PAUSE_TASK:
                 await self._api_client.task_action(device_id=fleet_id, action_type=1)
