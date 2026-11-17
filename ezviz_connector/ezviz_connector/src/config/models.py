@@ -28,6 +28,7 @@ class EzvizRobotConfig(RobotConfig):
     """
 
     fleet_robot_id: str
+    robot_model: str = "Ezviz Camera"
     channel: int = 1
     default_map: str | None = None
     pose_x: float = 0.0
