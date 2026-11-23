@@ -11,7 +11,7 @@ from unittest import mock
 
 from robot_diagnostics.common import classify_validation_status, sanitize_text
 from robot_diagnostics.inorbit import parse_describe_robots
-from robot_diagnostics.main import write_csv, write_json, write_markdown
+from robot_diagnostics.main import public_row, render_markdown, write_csv, write_json, write_markdown
 from robot_diagnostics.providers import allybot
 
 
@@ -104,6 +104,57 @@ allybot-cleaner-1                allybot-cleaner-1     2.0.1.edgesdk_py   True  
             self.assertEqual(csv_rows[0]["fleet_robot_id_masked"], "full-s...eet-id")
             json_rows = json.loads(json_path.read_text(encoding="utf-8"))
             self.assertNotIn("fleet_robot_id", json_rows[0])
+
+    def test_public_outputs_drop_account_ids_and_map_names(self) -> None:
+        rows = [
+            {
+                "robot_id": "autoxing-robot-1",
+                "provider": "AutoXing",
+                "fleet_robot_id": "secret-fleet-id-1",
+                "business_id": "secret-business-id",
+                "validated": "yaml_only",
+            },
+            {
+                "robot_id": "keenon-robot-1",
+                "provider": "Keenon",
+                "fleet_robot_id": "secret-fleet-id-2",
+                "store_id": "secret-store-id",
+                "validated": "yaml_only",
+            },
+            {
+                "robot_id": "allybot-robot-1",
+                "provider": "Allybot",
+                "fleet_robot_id": "secret-fleet-id-3",
+                "openid": "secret-openid",
+                "map_id": "secret-map-id",
+                "map_name": "Secret Vendor Map",
+                "visible_name": "Secret Vendor Robot",
+                "active_map_present": True,
+                "validated": "source_ok",
+            },
+        ]
+        secrets = [
+            "secret-fleet-id",
+            "secret-business-id",
+            "secret-store-id",
+            "secret-openid",
+            "secret-map-id",
+            "Secret Vendor Map",
+            "Secret Vendor Robot",
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            write_markdown(tmp_path / "inventory.md", rows)
+            write_csv(tmp_path / "inventory.csv", rows)
+            write_json(tmp_path / "inventory.json", rows)
+            outputs = {name: (tmp_path / name).read_text(encoding="utf-8") for name in ("inventory.md", "inventory.csv", "inventory.json")}
+        outputs["stdout.md"] = render_markdown(rows)
+        outputs["stdout.json"] = json.dumps([public_row(row) for row in rows])
+
+        for name, text in outputs.items():
+            for secret in secrets:
+                self.assertNotIn(secret, text, f"{secret!r} leaked into {name}")
+        self.assertIn("allybot-robot-1", outputs["inventory.md"])
 
     def test_versionable_examples_are_fictitious_and_sanitized(self) -> None:
         sample_md = PACKAGE_ROOT / "examples" / "sample_inventory.md"

@@ -32,7 +32,7 @@ INVENTORY_COLUMNS = [
     "online",
     "last_seen",
     "location_tags",
-    "map_name",
+    "active_map_present",
     "pose",
     "battery",
     "work_status",
@@ -43,9 +43,25 @@ INVENTORY_COLUMNS = [
 ]
 
 
+# Keys never written to public outputs (files and --format json/markdown):
+# vendor ids that identify the robot or the account, and vendor map names and
+# robot names, which are private to the customer.
+PRIVATE_KEYS = frozenset(
+    {
+        "fleet_robot_id",
+        "business_id",  # AutoXing account
+        "store_id",  # Keenon store
+        "openid",  # Allybot account
+        "map_id",
+        "map_name",
+        "visible_name",
+        "raw_line",
+    }
+)
+
+
 def public_row(row: dict[str, Any]) -> dict[str, Any]:
-    clean = dict(row)
-    clean.pop("fleet_robot_id", None)
+    clean = {key: value for key, value in row.items() if key not in PRIVATE_KEYS}
     clean.setdefault("location_tags", "not_available_with_cli")
     return clean
 
@@ -92,8 +108,7 @@ def markdown_cell(value: Any) -> str:
     return str(value).replace("\n", " ").replace("|", "\\|")
 
 
-def write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+def render_markdown(rows: list[dict[str, Any]]) -> str:
     lines = [
         "# Robot Inventory",
         "",
@@ -103,7 +118,12 @@ def write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
     for row in rows:
         clean = public_row(row)
         lines.append("| " + " | ".join(markdown_cell(clean.get(col)) for col in INVENTORY_COLUMNS) + " |")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return "\n".join(lines) + "\n"
+
+
+def write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_markdown(rows), encoding="utf-8")
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -140,8 +160,6 @@ def print_human(rows: list[dict[str, Any]]) -> None:
             "have_task_running",
             "water",
             "active_map_present",
-            "map_name",
-            "map_id",
             "resolution",
             "origin",
             "has_image_url",
@@ -212,9 +230,7 @@ async def async_main() -> int:
     if args.format == "json":
         print(json.dumps([public_row(row) for row in rows], indent=2, default=str))
     elif args.format == "markdown":
-        tmp = Path("/tmp/robot_inventory_stdout.md")
-        write_markdown(tmp, rows)
-        print(tmp.read_text(encoding="utf-8"))
+        print(render_markdown(rows), end="")
     else:
         print_human(rows)
     return 0
