@@ -54,7 +54,7 @@ fleet:
     name: TurtleBot Demo 01
     serial_number: TB3-DEMO-0001
     mac_address: "AA:BB:CC:DD:EE:01"
-    description: TurtleBot3 Waffle Pi demo robot - RS EU office
+    description: TurtleBot3 Waffle Pi demo robot - Demo office
     online: true
     initial_battery: 0.30
     initial_pose:

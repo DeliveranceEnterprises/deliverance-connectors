@@ -1,10 +1,10 @@
 # Office Demo - TurtleBot3 Gazebo World
 
-This directory contains the assets for the TurtleBot3 Gazebo simulation based on a real office floorplan. The goal is for Gazebo, Nav2, and InOrbit to share a coherent metric coordinate system.
+This directory contains the assets for the TurtleBot3 Gazebo simulation of a small demo office. The goal is for Gazebo, Nav2, and InOrbit to share a coherent metric coordinate system.
 
 ## Scale And Coordinates
 
-The office world is built to match the **Floorplan0** reference used in InOrbit:
+The office world uses these dimensions:
 
 | Parameter | Value |
 |---|---|
@@ -13,7 +13,7 @@ The office world is built to match the **Floorplan0** reference used in InOrbit:
 | Nav2 origin (centered) | `[-4.3222, -3.2102, 0.0]` |
 | Robot spawn / Home | `x = -2.0, y = -0.5` |
 
-The resolution was derived from the usable area of the PDF floorplan (`55.50 m²`) and the pixel dimensions of the cropped region (`824 × 612 px`):
+The resolution was derived from a target usable area (`55.50 m²`) and the pixel dimensions of the floor plan image (`824 × 612 px`):
 
 ```
 resolution = sqrt(55.50 / (824 * 612)) ≈ 0.0104908 m/px
@@ -27,7 +27,7 @@ height = 612 × 0.0104908 = 6.4203 m
 area   ≈ 55.50 m²
 ```
 
-The aspect ratio was cross-checked against real robot scans of the same area (Allybot: 1.299, AutoXing: 1.322, Floorplan0: 1.346) - close enough for a demo without a full metric calibration.
+The scale is approximate - close enough for a demo without a full metric calibration.
 
 ---
 
