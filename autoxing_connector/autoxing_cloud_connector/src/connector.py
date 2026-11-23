@@ -49,6 +49,7 @@ class AutoxingCloudConnector(FleetConnector):
             r.robot_id: RobotState() for r in config.fleet
         }
         self._area_names: dict[str, str] = {}  # areaId → name cache
+        self._instrumented_sessions: set[str] = set()  # robots whose display name is set
 
         self._api_client: AutoxingAPIClient | None = None
         self._data_poller: DataPoller | None = None
@@ -112,14 +113,16 @@ class AutoxingCloudConnector(FleetConnector):
     # ------------------------------------------------------------------
 
     def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
-        if robot_id in getattr(self, "_instrumented_sessions", set()):
+        if robot_id in self._instrumented_sessions:
             return
-        if not hasattr(self, "_instrumented_sessions"):
-            self._instrumented_sessions: set[str] = set()
         session = self._get_robot_session(robot_id)
         robot_cfg = self._robot_configs.get(robot_id)
         if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
             session.robot_name = robot_cfg.name
+            # No public API renames a robot after its session exists: the
+            # framework creates sessions with robot_name=robot_id, and
+            # inorbit_edge only sends the name with the robot status. This
+            # private call re-sends it; check it on inorbit_edge upgrades.
             session._send_robot_status(online=True)
             self._logger.info(
                 "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
