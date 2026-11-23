@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Named points for the WDC bridge. EXAMPLE VALUES ONLY: replace them with the
+# coordinates of the points saved in the robot's own app (map frame, metres,
+# yaw in radians), then point WDC_POINTS_FILE (or the ~points_file ROS
+# parameter) at your copy.
+#
+# Names are case-insensitive and may use letters, digits and underscores.
+# Each name NAME is commanded with the custom command "GOTO_NAME"; add a
+# matching action to cac/actions.yaml for it to appear in InOrbit. Only
+# points that are inside the robot's current map should be listed.
+
+points:
+  A:
+    x: 1.0
+    y: 0.0
+    yaw: 0.0
+  B:
+    x: 0.0
+    y: 1.0
+    yaw: 1.5708
+  HOME:
+    x: 0.0
+    y: 0.0
+    yaw: 0.0

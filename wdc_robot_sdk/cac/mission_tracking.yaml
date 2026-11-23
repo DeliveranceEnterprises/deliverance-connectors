@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# MissionTracking -- WDC (Agent SDK)
+# Replace <ACCOUNT_ID> and <ROBOT_ID> before applying (see README).
+# Makes InOrbit's interpretation of the bridge's mission_tracking JSON
+# explicit instead of relying on automatic inference. src/wdc_bridge_node.py
+# publishes the standard mission_tracking key-value with state values
+# "Executing", "Completed", "Canceled" (a Stop action the robot confirmed)
+# and "Aborted" (robot error, command refused or interrupted by a new
+# command), mapped here to defaultStatus. Same shape as the TurtleBot
+# connector and the Edge SDK connectors here.
+#
+# Scoped to the robot directly, not a tag -- WDC has no dedicated hardware
+# tag like Keenon/Allybot/Autoxing do.
+
+apiVersion: v0.1
+kind: MissionTracking
+metadata:
+  id: all
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
+spec:
+  processingType:
+    - api
+  autoClosePreviousMission: true
+  attributes:
+    mission_tracking:
+      type: missionApi
+  stateDefinitions:
+    Executing:
+      defaultStatus: OK
+    Completed:
+      defaultStatus: OK
+    Canceled:
+      defaultStatus: error
+    Aborted:
+      defaultStatus: error
