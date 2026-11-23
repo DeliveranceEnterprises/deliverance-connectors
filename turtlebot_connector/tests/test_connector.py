@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,15 +38,7 @@ def _make_connector() -> TurtlebotConnector:
             }
         ],
     )
-    connector = TurtlebotConnector.__new__(TurtlebotConnector)
-    connector._backends = {
-        robot.robot_id: FakeTurtlebotSimulator(robot, config.connector_config)
-        for robot in config.fleet
-    }
-    connector.config = config
-    connector._robot_configs = {robot.robot_id: robot for robot in config.fleet}
-    connector._logger = logging.getLogger("test")
-    return connector
+    return TurtlebotConnector(config)
 
 
 def _result_collector():
