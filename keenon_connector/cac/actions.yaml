@@ -4,18 +4,17 @@
 
 # ActionDefinition objects — Keenon Connector
 # Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
-# Scene: Espaitec (x4JmTv)
 
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
-  id: keenon-send-to-mesa-1
+  id: keenon-send-to-table-1
   scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
-  label: "Send to Mesa 1"
+  label: "Send to Table 1"
   group: Delivery
-  description: Send the robot to Mesa 1.
+  description: Send the robot to Table 1.
   confirmation:
     required: false
   lock: false
@@ -36,13 +35,13 @@ spec:
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
-  id: keenon-send-to-mesa-2
+  id: keenon-send-to-table-2
   scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
-  label: "Send to Mesa 2"
+  label: "Send to Table 2"
   group: Delivery
-  description: Send the robot to Mesa 2.
+  description: Send the robot to Table 2.
   confirmation:
     required: false
   lock: false
@@ -63,13 +62,13 @@ spec:
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
-  id: keenon-send-to-mesa-3
+  id: keenon-send-to-table-3
   scope: tag/rnLasGAxn5CP7bj32/DJbJhivzeMvXDj8z
 spec:
   type: RunScript
-  label: "Send to Mesa 3"
+  label: "Send to Table 3"
   group: Delivery
-  description: Send the robot to Mesa 3.
+  description: Send the robot to Table 3.
   confirmation:
     required: false
   lock: false

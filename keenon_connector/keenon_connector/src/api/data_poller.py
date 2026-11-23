@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 # How often to refresh static metadata (robot model, app version).
 METADATA_POLL_INTERVAL_S = 60.0
+# Bounded, spaced retries for the per-task report fetch.
+MAX_REPORT_ATTEMPTS = 5
+REPORT_RETRY_INTERVAL_S = 30.0
 
 
 class DataPoller:
@@ -73,7 +76,7 @@ class DataPoller:
                 await self._refresh_metadata(robot_id, fleet_id, store_id, state)
                 last_metadata = time.monotonic()
 
-            await self._refresh_realtime(robot_id, fleet_id, state)
+            await self._refresh_realtime(robot_id, fleet_id, store_id, state)
 
             try:
                 await asyncio.wait_for(
@@ -113,20 +116,42 @@ class DataPoller:
         self,
         robot_id: str,
         fleet_id: str,
+        store_id: str,
         state: RobotState,
     ) -> None:
-        try:
-            await self._update_status(fleet_id, state)
-            await self._update_location(fleet_id, state)
-            if state.robot_type == "clean":
+        # Each sub-update is isolated: a failure in one (e.g. a Keenon 500 on
+        # status) must not prevent the others - in particular the task-status
+        # poll and the report fetch, which run last.
+        any_ok = False
+        for label, coro in (
+            ("status", self._update_status(fleet_id, state)),
+            ("location", self._update_location(fleet_id, state)),
+        ):
+            try:
+                await coro
+                any_ok = True
+            except Exception as exc:
+                logger.error("Real-time %s failed for %s: %s", label, robot_id, exc)
+
+        if state.robot_type == "clean":
+            try:
                 await self._update_clean_status(fleet_id, state)
-            if state.task_no:
-                await self._update_task_status(state)
-            state.api_connected = True
+                any_ok = True
+            except Exception as exc:
+                # Don't keep publishing an old emergency stop we can no longer confirm.
+                state.clean_scram = None
+                logger.error("Real-time clean-status failed for %s: %s", robot_id, exc)
+
+        if state.task_no:
+            try:
+                await self._update_task_status(state, store_id, fleet_id)
+                any_ok = True
+            except Exception as exc:
+                logger.error("Real-time task-status failed for %s: %s", robot_id, exc)
+
+        state.api_connected = any_ok
+        if any_ok:
             state.last_update = time.time()
-        except Exception as exc:
-            logger.error("Real-time refresh failed for %s: %s", robot_id, exc)
-            state.api_connected = False
 
     async def _update_status(self, fleet_id: str, state: RobotState) -> None:
         status_list = await self._client.get_robot_status(fleet_id)
@@ -164,13 +189,16 @@ class DataPoller:
         gs = cs.get("globalState") or {}
         state.clean_faulting = gs.get("faulting")
         state.clean_scram = gs.get("scram")
+        state.clean_status_ts = time.monotonic()
         ch = cs.get("childState") or {}
         state.clean_navigating = ch.get("navigating")
         hw = cs.get("hardwareState") or {}
         state.clean_bilge_tank = hw.get("bilgeTankState")
         state.clean_water_tank = hw.get("cleanWaterTank")
 
-    async def _update_task_status(self, state: RobotState) -> None:
+    async def _update_task_status(
+        self, state: RobotState, store_id: str, fleet_id: str
+    ) -> None:
         task_data = await self._client.get_task_status(state.task_no)
         if not task_data:
             return
@@ -178,3 +206,66 @@ class DataPoller:
         # task_no is intentionally kept after reaching a terminal status so the
         # connector can publish the final mission_tracking state.  It is cleared
         # when the next task is dispatched.
+
+        # Once the task is terminal, fetch the task detail (task/info, keyed by
+        # taskNo) for the report.  We retry while the report is still missing -
+        # SPACED by REPORT_RETRY_INTERVAL_S (not every poll), bounded by
+        # MAX_REPORT_ATTEMPTS - so the robot has time to finalise taskDistance
+        # and a transient error does not leave the report permanently empty.
+        now_monotonic = time.monotonic()
+        due = (
+            state.task_report_attempts == 0
+            or now_monotonic - state.task_report_last_attempt >= REPORT_RETRY_INTERVAL_S
+        )
+        if (
+            state.task_status in TERMINAL_TASK_STATUSES
+            and state.task_report is None
+            and state.task_start_ts
+            and state.task_report_attempts < MAX_REPORT_ATTEMPTS
+            and due
+        ):
+            state.task_report_attempts += 1
+            state.task_report_last_attempt = now_monotonic
+            try:
+                info = await self._client.get_task_info(state.task_no)
+            except Exception as exc:
+                logger.warning("Failed to fetch task report for %s: %s", state.task_no, exc)
+                return
+            if not info:
+                logger.info(
+                    "No task/info yet for %s (attempt %d/%d)",
+                    state.task_no, state.task_report_attempts, MAX_REPORT_ATTEMPTS,
+                )
+                return
+            report = build_task_report(info)
+            last_attempt = state.task_report_attempts >= MAX_REPORT_ATTEMPTS
+            # A completed task whose distance is still 0 has not been finalised
+            # by the robot yet: keep retrying instead of freezing an empty report.
+            # On the last attempt keep whatever we have.
+            if not report["task_mileage"] and state.task_status == 4 and not last_attempt:
+                logger.info(
+                    "Task report for %s still incomplete (attempt %d/%d), retrying",
+                    state.task_no, state.task_report_attempts, MAX_REPORT_ATTEMPTS,
+                )
+                return
+            state.task_report = report
+            logger.info("Fetched task report for %s: %s", state.task_no, state.task_report)
+
+
+def build_task_report(info: dict) -> dict:
+    """Build the per-task report from a task/info payload."""
+    subtasks = info.get("subTaskInfoList") or []
+    # Sum per-point distances (metres) for total task mileage.
+    mileage = 0.0
+    for st in subtasks:
+        try:
+            mileage += float(st.get("taskDistance") or 0)
+        except (TypeError, ValueError):
+            pass
+    point_name = subtasks[-1].get("pointName") if subtasks else None
+    return {
+        "task_mileage": mileage,
+        "task_mode": info.get("taskType"),
+        "point_name": point_name,
+        "task_state": info.get("taskState"),
+    }

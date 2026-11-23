@@ -6,10 +6,11 @@
 
 import logging
 import math
+import time
 
 from aiohttp import web
 
-from .models import RobotState
+from .models import RobotState, parse_task_state
 
 logger = logging.getLogger(__name__)
 
@@ -155,8 +156,15 @@ class KeenonWebhookReceiver:
         sn = body.get("robotSn", "")
         state = self._state_for_sn(sn)
         if state:
-            state.task_no = body.get("taskNo")
-            state.task_status = body.get("taskState")
+            new_no = body.get("taskNo")
+            task_state = parse_task_state(body.get("taskState"))
+            if new_no != state.task_no:
+                # A different task (e.g. started on the robot itself): reset every
+                # per-task field so the previous task's label, end time and report
+                # don't leak into it.
+                state.start_task(new_no, status=task_state)
+            else:
+                state.task_status = task_state
 
     def _on_clean_status(self, body: dict) -> None:
         # Keenon wraps the payload in 'data' for some webhook versions.
@@ -170,6 +178,7 @@ class KeenonWebhookReceiver:
         gs = payload.get("globalState") or {}
         state.clean_faulting = gs.get("faulting")
         state.clean_scram = gs.get("scram")
+        state.clean_status_ts = time.monotonic()
         ch = payload.get("childState") or {}
         state.clean_navigating = ch.get("navigating")
         hw = payload.get("hardwareState") or {}

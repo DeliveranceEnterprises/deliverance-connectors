@@ -99,6 +99,13 @@ The Connector can be run as a containerized application using Docker Compose:
 
 The Docker Compose setup supports environment variable configuration via `config/.env` and allows running multiple connector instances. See `docker/docker-compose.example.yaml` for detailed configuration options.
 
+### Running alongside deliverance-integrations-keenon
+
+This connector and the `deliverance-integrations-keenon` service both talk to the Keenon Cloud API. When both run against the same Keenon account:
+
+- **Use a separate Keenon app (appKey/appSecret) for each service.** Keenon keeps a single token per app, so a token request from one service invalidates the token the other one holds. With shared credentials the two services keep logging each other out. This connector re-logs in only when its token is rejected and backs off repeated logins (`login_backoff_min_s`, default 60 s, doubling up to `login_backoff_max_s`), but that only limits the damage; it does not fix shared credentials.
+- **Only one of them can receive webhook callbacks.** The Keenon documentation mentions a single webhook URL per app; verify with Keenon. Configure the webhook URL for the service that needs the callbacks (leave `webhook_port` unset on this connector if the other service owns it); the other one relies on polling.
+
 ## Contributing
 
 Any contribution that you make to this repository will be under the MIT license, as dictated by that [license](https://opensource.org/licenses/MIT).
