@@ -1,0 +1,6 @@
+# Generated inventories may contain real robot names, ids, maps and state.
+outputs/
+
+__pycache__/
+.venv/
+.pytest_cache/
