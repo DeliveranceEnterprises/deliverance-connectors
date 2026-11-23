@@ -86,6 +86,10 @@ STOP_MAX_ATTEMPTS = 3
 STOP_CONFIRM_POLLS = 6
 STOP_CONFIRM_INTERVAL_SEC = 0.5
 
+# While only a fallback map (static JPEG or blank) is published, the node
+# asks the robot for its map again at this period.
+MAP_RETRY_PERIOD_SEC = 30.0
+
 
 class _RospyLogger:
     """Routes the ROS-free client's log calls to rosout."""
@@ -113,7 +117,10 @@ class WdcBridgeNode:
         self._points = self._load_named_points()
         self._api = LocalApiClient(LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH, logger=_RospyLogger())
         self._publish_static_laser_tf()
-        self._publish_real_map()
+        self._map_retry_timer = None
+        if not self._publish_real_map():
+            rospy.logwarn("No map from the robot yet: retrying every %.0fs", MAP_RETRY_PERIOD_SEC)
+            self._map_retry_timer = rospy.Timer(rospy.Duration(MAP_RETRY_PERIOD_SEC), self._retry_map)
         # Mission tracking state, written by the command callback, the STOP
         # thread and the poll timer: always accessed under _task_lock.
         self._task_lock = threading.RLock()
@@ -153,7 +160,25 @@ class WdcBridgeNode:
         rospy.loginfo("Loaded %d named points from %s: %s", len(points), path, ", ".join(sorted(points)))
         return points
 
-    def _publish_real_map(self) -> None:
+    def _retry_map(self, _event) -> None:
+        if self._map_retry_timer is None:
+            return
+        map_data = self._api.request("map")
+        if not self._is_live_map(map_data):
+            return
+        try:
+            self._publish_live_map(map_data)
+        except Exception as exc:
+            rospy.logerr("Live map decode failed (%s) -- retrying later", exc)
+            return
+        self._map_retry_timer.shutdown()
+        self._map_retry_timer = None
+
+    @staticmethod
+    def _is_live_map(map_data) -> bool:
+        return isinstance(map_data, dict) and all(k in map_data for k in ("data", "width", "height", "resolution"))
+
+    def _publish_real_map(self) -> bool:
         """Publishes the robot's own map (cmd:"map": a base64 JPEG plus
         resolution, size and offx/offy), falling back to the local PGM pair,
         the static JPEG and finally a blank placeholder.
@@ -161,12 +186,15 @@ class WdcBridgeNode:
         offx/offy are taken as the OccupancyGrid origin (bottom-left cell),
         the map_server convention. The live map shares the pose's coordinate
         frame, which the static JPEG does not.
+
+        Returns True when the robot's map or the local PGM was published,
+        False for a fallback that should be replaced later.
         """
         map_data = self._api.request("map")
-        if isinstance(map_data, dict) and all(k in map_data for k in ("data", "width", "height", "resolution")):
+        if self._is_live_map(map_data):
             try:
                 self._publish_live_map(map_data)
-                return
+                return True
             except Exception as exc:
                 rospy.logerr("Live map fetch/decode failed (%s) -- falling back to a local map, if any", exc)
         else:
@@ -174,10 +202,11 @@ class WdcBridgeNode:
         if LOCAL_PGM_MAP_PATH and LOCAL_PGM_YAML_PATH:
             try:
                 self._publish_real_pgm_map()
-                return
+                return True
             except Exception as exc:
                 rospy.logerr("Local PGM map fetch/decode failed (%s) -- falling back to static jpg", exc)
         self._publish_static_fallback_map()
+        return False
 
     @staticmethod
     def _parse_pgm_yaml(path: str) -> dict:

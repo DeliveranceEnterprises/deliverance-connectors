@@ -55,7 +55,10 @@ which are what the actions in `cac/actions.yaml` send:
 The map is taken from the robot itself (`cmd: "map"`). If that fails, the node
 uses the PGM and YAML pair when configured, then the static image in
 `src/static_map.jpg` (optional, not included in the repository), and finally a blank
-placeholder map. The map still has
+placeholder map. While one of those last two is in use (for example because
+the tablet was unreachable at start-up), the node asks the robot for its map
+again every 30 seconds and republishes the latched `/map` once it gets one.
+The map still has
 to be aligned onto the shared floor plan by hand in InOrbit Control's Locations
 editor.
 
