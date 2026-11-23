@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+.env
+.env.local
+*.local.yaml
+my_fleet.yaml
