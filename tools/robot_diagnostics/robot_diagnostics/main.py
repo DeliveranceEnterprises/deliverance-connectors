@@ -16,7 +16,6 @@ from .providers import allybot, autoxing, keenon
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_INORBIT_WORKSPACE = Path.home() / "INORBIT"
 PROVIDERS = {
     "allybot": allybot.diagnose,
     "keenon": keenon.diagnose,
@@ -191,7 +190,13 @@ async def async_main() -> int:
     )
     parser.add_argument("--no-inorbit", action="store_true")
     parser.add_argument("--include-inorbit-related", action="store_true")
-    parser.add_argument("--inorbit-workspace", default=str(DEFAULT_INORBIT_WORKSPACE))
+    parser.add_argument(
+        "--inorbit-workspace",
+        help=(
+            "Directory with .venv-inorbit/bin/inorbit and .env-inorbit. "
+            "By default the inorbit CLI on PATH runs with the current environment."
+        ),
+    )
     parser.add_argument("--markdown")
     parser.add_argument("--csv")
     parser.add_argument("--json")
@@ -220,7 +225,7 @@ async def async_main() -> int:
         return 1
 
     if not args.no_inorbit:
-        inorbit, error = describe_robots(Path(args.inorbit_workspace))
+        inorbit, error = describe_robots(Path(args.inorbit_workspace) if args.inorbit_workspace else None)
         rows = merge_inorbit(rows, inorbit, args.include_inorbit_related)
         if error:
             for row in rows:

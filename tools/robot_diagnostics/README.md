@@ -8,19 +8,33 @@ The tool is intentionally conservative:
 - It can query manufacturer APIs using read-only endpoints.
 - It can query InOrbit using `inorbit describe robots`.
 - It does not run robot actions, navigation commands, tasks, `inorbit apply`, or `inorbit delete`.
-- It masks fleet IDs and never prints full secrets.
-- Generated inventory outputs should go under repo-root `outputs/`, which is ignored by Git.
+- It masks fleet IDs and never prints full secrets. Files and the json/markdown output also leave out account identifiers (AutoXing `business_id`, Keenon `store_id`, Allybot `openid`) and vendor map and robot names.
+- It only logs in to Allybot when you pass `--allow-login` (see below).
+- Generated inventory outputs should go under `outputs/` in this directory, which is ignored by Git.
+
+> **Allybot: use a dedicated account.** Allybot keeps one session per account,
+> so logging in from this tool ends the session of every other consumer of the
+> account: the running Allybot connector and the Deliverance Platform
+> integration (`deliverance-integrations-allybot`). The live Allybot query is
+> therefore skipped unless you pass `--allow-login` or set
+> `ALLYBOT_DIAGNOSTICS_ALLOW_LOGIN=1`. Only do so with an account that no
+> production service uses.
 
 ## Usage
 
 From the repo root:
 
 ```bash
-cd ~/INORBIT/deliverance-connectors
 cd tools/robot_diagnostics
 uv sync
-uv run robot-diagnostics --provider allybot --all --ws-seconds 10
+uv run robot-diagnostics --provider all --all
+# Live Allybot query, with a dedicated account only:
+uv run robot-diagnostics --provider allybot --all --ws-seconds 10 --allow-login
 ```
+
+InOrbit is queried with the `inorbit` CLI on `PATH` and the current
+environment. Pass `--inorbit-workspace <dir>` to use `<dir>/.venv-inorbit/bin/inorbit`
+with the variables of `<dir>/.env-inorbit` instead, or `--no-inorbit` to skip it.
 
 Generate a real inventory under an ignored `outputs/` directory:
 
@@ -38,7 +52,7 @@ The `outputs/` path is ignored because it may contain real robot names, robot ID
 Run the local test suite:
 
 ```bash
-uv run python -m unittest discover -s tests
+uv run pytest
 ```
 
 Validation states:
@@ -57,11 +71,11 @@ In short:
 - `source_partial` means the manufacturer source responded partially, but map, pose, or InOrbit visibility is missing.
 - `inorbit_ok` means InOrbit sees the robot, even if the manufacturer source was not validated in this run.
 
-Provider config defaults:
-
-- Allybot: `../../allybot_connector/config/my_fleet.local.yaml`, `../../allybot_connector/config/.env.local`
-- Keenon: `../../keenon_connector/config/my_fleet.local.yaml`, `../../keenon_connector/config/.env.local`
-- AutoXing: `../../autoxing_connector/config/my_fleet.local.yaml`, `../../autoxing_connector/config/.env.local`
+Provider config: each provider reads `<connector>/config/my_fleet.local.yaml`,
+or `<connector>/config/my_fleet.yaml` when there is no local copy, and the
+matching `.env.local` or `.env` (for example `allybot_connector/config/my_fleet.yaml`
+and `allybot_connector/config/.env`, relative to the repo root). A provider
+without a fleet config is reported as not configured and skipped.
 
 Keenon and AutoXing provider modules currently parse local configuration and mark missing credentials/placeholders clearly. Their API-specific read-only checks are intentionally incremental and can be expanded after real credentials are available.
 

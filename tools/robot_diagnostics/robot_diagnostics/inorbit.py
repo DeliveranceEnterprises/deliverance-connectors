@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -54,24 +55,35 @@ def parse_describe_robots(output: str) -> dict[str, dict[str, Any]]:
     return robots
 
 
-def describe_robots(workspace: Path) -> tuple[dict[str, dict[str, Any]], str | None]:
-    """Run `inorbit describe robots` in read-only mode."""
-    inorbit_bin = workspace / ".venv-inorbit" / "bin" / "inorbit"
-    env_file = workspace / ".env-inorbit"
-    if not inorbit_bin.exists():
-        return {}, f"InOrbit CLI not found at {inorbit_bin}"
-    if not env_file.exists():
-        return {}, f"InOrbit env file not found at {env_file}"
+def describe_robots(workspace: Path | None) -> tuple[dict[str, dict[str, Any]], str | None]:
+    """Run `inorbit describe robots` in read-only mode.
 
+    Without a workspace, the `inorbit` CLI on PATH runs with the current
+    environment. With one, its `.venv-inorbit/bin/inorbit` runs with the
+    variables of its `.env-inorbit` file.
+    """
     env = os.environ.copy()
-    env.update(_load_env_file(env_file))
+    if workspace is None:
+        found = shutil.which("inorbit")
+        if not found:
+            return {}, "InOrbit CLI not found on PATH (or pass --inorbit-workspace)"
+        inorbit_bin = Path(found)
+    else:
+        inorbit_bin = workspace / ".venv-inorbit" / "bin" / "inorbit"
+        env_file = workspace / ".env-inorbit"
+        if not inorbit_bin.exists():
+            return {}, f"InOrbit CLI not found at {inorbit_bin}"
+        if not env_file.exists():
+            return {}, f"InOrbit env file not found at {env_file}"
+        env.update(_load_env_file(env_file))
+
     result = subprocess.run(
         [str(inorbit_bin), "describe", "robots"],
         check=False,
         text=True,
         capture_output=True,
         env=env,
-        cwd=str(workspace),
+        cwd=str(workspace) if workspace else None,
     )
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip()
