@@ -16,9 +16,11 @@ services:
       - RESOLUTION=${RESOLUTION:-1280x800}
     volumes:
       - ../..:/workspace/turtlebot_connector:rw
+    # The VNC desktop has no real authentication: only expose it on this
+    # machine.
     ports:
-      - "6080:80"
-      - "5900:5900"
+      - "127.0.0.1:6080:80"
+      - "127.0.0.1:5900:5900"
     shm_size: "2gb"
     stdin_open: true
     tty: true

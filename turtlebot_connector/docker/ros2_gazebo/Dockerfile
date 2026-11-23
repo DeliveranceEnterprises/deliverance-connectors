@@ -4,7 +4,9 @@
 
 # ROS 2 Humble is the practical target for TurtleBot3 + Nav2 + Gazebo classic.
 # The VNC image gives a browser-accessible desktop at http://localhost:6080.
-FROM tiryoh/ros2-desktop-vnc:humble
+# Pinned to a dated tag and its digest so rebuilds are reproducible; bump both
+# together (tags are listed at hub.docker.com/r/tiryoh/ros2-desktop-vnc/tags).
+FROM tiryoh/ros2-desktop-vnc:humble-20261115T0418@sha256:220b530d43198dd95d6b44b40e10469c8b13037bb64754f18fa445634b180626
 
 USER root
 

@@ -6,7 +6,7 @@
 set -eo pipefail
 
 source "/opt/ros/${ROS_DISTRO:-humble}/setup.bash"
-export TURTLEBOT3_MODEL="${TURTLEBOT3_MODEL:-burger}"
+export TURTLEBOT3_MODEL="${TURTLEBOT3_MODEL:-waffle_pi}"
 
 MAP_FILE="${1:-/opt/ros/${ROS_DISTRO:-humble}/share/turtlebot3_navigation2/map/map.yaml}"
 
