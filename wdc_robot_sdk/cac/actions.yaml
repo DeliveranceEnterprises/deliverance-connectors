@@ -33,8 +33,10 @@ spec:
   label: Stop
   group: Navigation
   description: Stops the robot's current motion immediately.
+  # No confirmation dialog: a stop must not be delayed. The node retries
+  # it until the robot reports that it has stopped.
   confirmation:
-    required: true
+    required: false
   lock: false
   arguments:
     - name: topic

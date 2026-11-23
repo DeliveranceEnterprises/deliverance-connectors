@@ -34,7 +34,10 @@ involved. The node polls it every 2 seconds and publishes:
 It subscribes to `/inorbit/custom_command` and accepts three kinds of command,
 which are what the actions in `cac/actions.yaml` send:
 
-- `STOP`
+- `STOP`: sent ahead of the polling (which pauses meanwhile) and retried up
+  to 3 times until the robot's `info` reports `agvStop`. The result is
+  logged and published as the `stop_status` key value (`confirmed` or
+  `failed`); a confirmed stop closes the current mission as `Canceled`.
 - `CHARGE`
 - `GOTO_<POINT>`, where `<POINT>` is a point of the points file (see
   [Named points](#named-points)). Any other name is refused.
@@ -104,5 +107,5 @@ The `cac/` directory has the config-as-code for the robot:
   ignores the error code of blank `info` replies, but running a second client
   against the same port at the same time can still mix up replies.
 - The robot refuses a new destination while a previous job is pending (the
-  reply is `BUSY!`). The node reports it instead of retrying: send `STOP`
-  first.
+  reply is `BUSY!`). The node reports it and closes the mission as
+  `Aborted` instead of retrying: send `STOP` first.
