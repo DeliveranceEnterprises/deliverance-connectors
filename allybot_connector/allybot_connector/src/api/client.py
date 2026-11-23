@@ -370,7 +370,7 @@ class AllybotAPIClient:
         except Exception as exc:
             logger.warning("check_task_reachable failed (proceeding anyway): %s", exc)
 
-    async def get_device_status(self, device_id: str) -> dict | None:
+    async def get_use_status(self, device_id: str) -> dict | None:
         """POST /fleetapi/device/usestatus — snapshot of robot state including location flag."""
         try:
             return await self._post(
@@ -382,6 +382,32 @@ class AllybotAPIClient:
                     "id": device_id,
                 },
             )
+        except Exception as exc:
+            logger.warning("get_use_status(%s) failed: %s", device_id, exc)
+            return None
+
+    async def get_device_status(self, device_id: str) -> dict | None:
+        """POST /fleetapi/device/status — chassisStatus (batteryPercent, charging,
+        emergencyStop, emergencyStopManual) and the localization flag. No x/y.
+
+        Never logs in again (it is polled): a lost session returns None until a
+        WebSocket reconnect or a command logs in.
+        """
+        try:
+            data = await self._post(
+                "/fleetapi/device/status",
+                headers=self._mobile_headers(),
+                data={
+                    "openid": self.openid,
+                    "token": self.mobile_token,
+                    "id": device_id,
+                    "robotId": device_id,
+                },
+            )
+            return data if isinstance(data, dict) else None
+        except AllybotSessionExpired as exc:
+            logger.debug("get_device_status(%s): session lost: %s", device_id, exc)
+            return None
         except Exception as exc:
             logger.warning("get_device_status(%s) failed: %s", device_id, exc)
             return None

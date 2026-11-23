@@ -17,7 +17,12 @@ from inorbit_edge.robot import COMMAND_CUSTOM_COMMAND
 from allybot_connector import __version__ as connector_version
 from allybot_connector.src.api.app_ws import AllybotAppWebSocket
 from allybot_connector.src.api.client import AllybotAPIClient
-from allybot_connector.src.api.models import ALIVE_STATUS_MAP, TASK_STATUS_MAP, AllybotRobotState
+from allybot_connector.src.api.models import (
+    ALIVE_STATUS_MAP,
+    TASK_STATUS_MAP,
+    AllybotRobotState,
+    chassis_emergency_stop,
+)
 from allybot_connector.src.commands import CustomScripts, StartTaskCommand
 from allybot_connector.src.config.models import AllybotConnectorConfig, AllybotRobotConfig
 
@@ -27,6 +32,9 @@ logger = logging.getLogger(__name__)
 _WS_TIMEOUT_S = 60.0
 # How often to refresh robot metadata and map info via REST.
 _METADATA_POLL_INTERVAL_S = 60.0
+# How often to poll REST device/status for the emergency stop (one request per robot,
+# no login: a lost session just leaves the WS heuristic in charge until the next login).
+_STATUS_POLL_INTERVAL_S = 10.0
 
 class AllybotConnector(FleetConnector):
     """InOrbit Fleet Connector for the Ally Fleet Robot API.
@@ -85,8 +93,9 @@ class AllybotConnector(FleetConnector):
         self._app_ws = self._build_app_ws()
         self._app_ws.start()
 
-        # Seed metadata immediately, then refresh on a background task.
+        # Seed metadata and status immediately, then refresh on a background task.
         await self._refresh_all_metadata()
+        await self._refresh_all_status()
         self._metadata_task = asyncio.create_task(
             self._metadata_loop(), name="allybot-meta"
         )
@@ -129,9 +138,20 @@ class AllybotConnector(FleetConnector):
     # ------------------------------------------------------------------
 
     async def _metadata_loop(self) -> None:
+        last_metadata = time.monotonic()
         while True:
-            await asyncio.sleep(_METADATA_POLL_INTERVAL_S)
-            await self._refresh_all_metadata()
+            await asyncio.sleep(_STATUS_POLL_INTERVAL_S)
+            await self._refresh_all_status()
+            if time.monotonic() - last_metadata >= _METADATA_POLL_INTERVAL_S:
+                await self._refresh_all_metadata()
+                last_metadata = time.monotonic()
+
+    async def _refresh_all_status(self) -> None:
+        """REST device/status per robot: the primary emergency stop signal."""
+        for robot_id, fleet_id in self._robot_id_to_fleet_id.items():
+            state = self._robot_states[robot_id]
+            data = await self._api_client.get_device_status(fleet_id)
+            state.rest_emergency_stop = chassis_emergency_stop(data)
 
     async def _refresh_all_metadata(self) -> None:
         for robot_id, fleet_id in self._robot_id_to_fleet_id.items():
@@ -343,7 +363,7 @@ class AllybotConnector(FleetConnector):
     def _compute_mission_status(self, state: AllybotRobotState) -> str:
         if not state.ws_connected:
             return "Error"
-        if state.emergency_stop:
+        if state.is_emergency_stopped:
             return "Emergency"
         if state.have_task_running:
             if state.task_status_code == 9:  # Paused

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
@@ -521,3 +522,128 @@ def test_unseen_work_status_log_is_kept_per_websocket_instance(caplog) -> None:
         second._on_device_status(_device_status_body("Something New"))
     assert sum("never seen before" in r.message for r in caplog.records) == 2
     assert first._unseen_work_status_logged is not second._unseen_work_status_logged
+
+
+# ---------------------------------------------------------------------------
+# Emergency stop from REST device/status (primary), App WS heuristic (fallback)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("chassis", "expected"),
+    [
+        ({"emergencyStop": True, "emergencyStopManual": False}, True),   # the button
+        ({"emergencyStop": False, "emergencyStopManual": True}, True),   # stopped from the app
+        ({"emergencyStop": False, "emergencyStopManual": False}, False),
+        ({"emergencyStop": "1"}, True),
+        ({"emergencyStop": 0}, False),
+        ({"batteryPercent": 90}, None),  # does not say
+    ],
+)
+def test_chassis_emergency_stop_reads_both_flags(chassis: dict, expected: bool | None) -> None:
+    from allybot_connector.src.api.models import chassis_emergency_stop
+
+    assert chassis_emergency_stop({"chassisStatus": chassis}) is expected
+
+
+def test_chassis_emergency_stop_is_unknown_without_a_response() -> None:
+    from allybot_connector.src.api.models import chassis_emergency_stop
+
+    assert chassis_emergency_stop(None) is None
+    assert chassis_emergency_stop({"localization": True}) is None
+
+
+class _StatusClient:
+    """Stands in for AllybotAPIClient: device/status answers, and counts logins (there must be none)."""
+
+    def __init__(self, *answers: dict | None) -> None:
+        self.answers = list(answers)
+        self.status_calls = 0
+        self.metadata_calls = 0
+        self.logins = 0
+
+    async def get_device_status(self, device_id: str) -> dict | None:
+        self.status_calls += 1
+        return self.answers.pop(0) if self.answers else None
+
+    async def get_robot_info(self, device_id: str) -> dict | None:
+        self.metadata_calls += 1
+        return None
+
+    async def get_active_map(self, device_id: str) -> dict | None:
+        return None
+
+    async def login(self) -> None:
+        self.logins += 1
+
+    async def refresh_session(self) -> tuple[str, str]:
+        self.logins += 1
+        return "oid", "tok"
+
+
+async def test_rest_emergency_stop_gives_the_emergency_mode_and_clears() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+    ws._on_device_status(_device_status_body("Operating", have_task=True))  # the WS says nothing
+    connector._api_client = _StatusClient(
+        {"chassisStatus": {"emergencyStop": False, "emergencyStopManual": True}},
+        {"chassisStatus": {"emergencyStop": False, "emergencyStopManual": False}},
+    )
+    await connector._refresh_all_status()
+    assert connector._compute_mission_status(state) == "Emergency"
+    await connector._refresh_all_status()
+    assert connector._compute_mission_status(state) == "Mission"
+    assert connector._api_client.logins == 0
+
+
+async def test_rest_emergency_stop_wins_over_the_websocket_heuristic() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+    ws._on_device_status(_device_status_body("Emergency Stop"))  # the WS heuristic says emergency
+    connector._api_client = _StatusClient({"chassisStatus": {"emergencyStop": False}})
+    await connector._refresh_all_status()
+    assert connector._compute_mission_status(state) == "Idle"
+
+
+async def test_without_a_rest_answer_the_websocket_heuristic_is_the_fallback() -> None:
+    connector = _make_connector()
+    ws, state = _ws_and_state(connector)
+    state.rest_emergency_stop = True  # from an earlier poll
+    connector._api_client = _StatusClient(None)  # this poll failed (e.g. session lost)
+    await connector._refresh_all_status()
+    assert state.rest_emergency_stop is None  # an old answer is not kept
+    body = _device_status_body("Operating", have_task=True)
+    body["data"]["emergencyStop"] = True
+    ws._on_device_status(body)
+    assert connector._compute_mission_status(state) == "Emergency"
+
+
+async def test_status_is_polled_every_tick_and_metadata_every_minute_without_logins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from allybot_connector.src import connector as connector_module
+
+    clock = [0.0]
+    ticks = [0]
+
+    async def fake_sleep(delay: float, *_a, **_k) -> None:
+        ticks[0] += 1
+        if ticks[0] > 12:
+            raise asyncio.CancelledError
+        clock[0] += delay
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(
+        connector_module, "time", SimpleNamespace(monotonic=lambda: clock[0], time=time.time)
+    )
+    connector = _make_connector()
+    client = _StatusClient()
+    connector._api_client = client
+    with pytest.raises(asyncio.CancelledError):
+        await connector._metadata_loop()
+    # 12 ticks of 10 s = 120 s: 12 status polls, metadata at 60 s and 120 s.
+    assert client.status_calls == 12
+    assert client.metadata_calls == 2
+    assert client.logins == 0

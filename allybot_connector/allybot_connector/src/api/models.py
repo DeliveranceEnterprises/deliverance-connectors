@@ -55,6 +55,39 @@ def normalize_work_status(raw: str | None) -> str | None:
     return _WORK_STATUS_CANONICAL.get(raw.strip().casefold(), raw)
 
 
+def _flag(value: object) -> bool | None:
+    """A boolean flag of a REST response (bool, 0/1 or text), or None when it is missing or unreadable."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value).strip().casefold()
+    if text in ("true", "1", "yes"):
+        return True
+    if text in ("false", "0", "no", ""):
+        return False
+    return None
+
+
+def chassis_emergency_stop(device_status: dict | None) -> bool | None:
+    """Emergency stop from a REST ``device/status`` response, or None when it does not say.
+
+    ``chassisStatus.emergencyStop`` is the physical button and ``emergencyStopManual`` a stop
+    from the app; either one stops the robot. Same reading as deliverance-integrations-allybot.
+    """
+    if not isinstance(device_status, dict):
+        return None
+    chassis = device_status.get("chassisStatus")
+    if not isinstance(chassis, dict):
+        return None
+    flags = [_flag(chassis.get("emergencyStop")), _flag(chassis.get("emergencyStopManual"))]
+    if all(f is None for f in flags):
+        return None
+    return any(bool(f) for f in flags)
+
+
 @dataclass
 class AllybotRobotState:
     """Cached state for a single Allybot robot, updated by the App WS and REST polling."""
@@ -102,11 +135,21 @@ class AllybotRobotState:
     sewage_water: float | None = None  # %
     work_status: str | None = None  # "Charging" / "Idle" / "Operating"
     have_task_running: bool | None = None
-    # Emergency stop engaged. NOT VERIFIED against a real robot: the App WS devicestatus documented
-    # for this connector carries no emergency field (emergencyStop is in the fleet WS ROBOT message,
-    # which delivers nothing today). Read from a devicestatus `emergencyStop` key or a work_status
-    # that says emergency, if the robot ever sends one; see `AllybotAppWebSocket._on_device_status`.
+    # Emergency stop from the App WS: a fallback heuristic, NOT VERIFIED against a real robot. The
+    # devicestatus documented for this connector carries no emergency field; this reads a
+    # devicestatus `emergencyStop` key or a work_status that says emergency, if the robot ever sends
+    # one; see `AllybotAppWebSocket._on_device_status`.
     emergency_stop: bool = False
+    # Emergency stop from REST device/status chassisStatus (the primary signal), polled by the
+    # connector. None when the last poll failed or did not say (then the WS heuristic is used).
+    rest_emergency_stop: bool | None = None
+
+    @property
+    def is_emergency_stopped(self) -> bool:
+        """REST chassisStatus when known, the App WS heuristic otherwise."""
+        if self.rest_emergency_stop is not None:
+            return self.rest_emergency_stop
+        return self.emergency_stop
 
     # Connectivity health
     ws_connected: bool = False

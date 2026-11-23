@@ -372,3 +372,36 @@ async def test_a_failed_login_also_counts_for_the_minimum_interval(httpx_mock: H
         await c.refresh_session()
     assert c._relogin_wait_s() > 59
     await c.close()
+
+
+# ---------------------------------------------------------------------------
+# device/status (emergency stop), polled without ever logging in
+# ---------------------------------------------------------------------------
+
+
+async def test_get_device_status_returns_the_chassis_status(
+    client: AllybotAPIClient, httpx_mock: HTTPXMock
+) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/device/status",
+        json={
+            "code": 200,
+            "message": "success",
+            "data": {"chassisStatus": {"emergencyStop": False, "emergencyStopManual": True}},
+        },
+    )
+    data = await client.get_device_status(ROBOT_ID)
+    assert data == {"chassisStatus": {"emergencyStop": False, "emergencyStopManual": True}}
+    body = httpx_mock.get_requests()[-1].content.decode()
+    assert f"id={ROBOT_ID}" in body and f"robotId={ROBOT_ID}" in body
+
+
+async def test_get_device_status_with_a_lost_session_returns_none_and_does_not_log_in(
+    client: AllybotAPIClient, httpx_mock: HTTPXMock
+) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/fleetapi/device/status",
+        json={"code": 505, "message": "LOGGED IN SOMEWHERE ELSE", "data": None},
+    )
+    assert await client.get_device_status(ROBOT_ID) is None
+    assert client.mobile_token == "mobile-tok"  # no login (an unexpected request fails the test)
