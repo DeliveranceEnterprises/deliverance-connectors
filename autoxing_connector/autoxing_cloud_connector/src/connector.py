@@ -73,6 +73,7 @@ class AutoxingCloudConnector(FleetConnector):
             api_appcode=cfg.api_appcode,
             verify_ssl=cfg.verify_ssl,
             timeout=cfg.request_timeout,
+            relogin_min_interval=cfg.relogin_min_interval,
         )
         await self._api_client.login()
 

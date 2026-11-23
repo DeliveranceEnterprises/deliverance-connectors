@@ -4,6 +4,7 @@
 
 """REST client for the AutoXing Cloud Platform API."""
 
+import asyncio
 import logging
 import time
 
@@ -54,6 +55,8 @@ class AutoxingAPIClient:
         api_appcode: str,
         verify_ssl: bool = True,
         timeout: float = 30.0,
+        relogin_min_interval: float = 60.0,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._login_name = login_name
@@ -66,9 +69,18 @@ class AutoxingAPIClient:
             base_url=self._base_url,
             verify=verify_ssl,
             timeout=timeout,
+            transport=transport,
+            event_hooks={"response": [self._on_response]},
         )
         self._token: str | None = None
         self._token_expires_at: float = 0.0
+        # Logins are spaced at least this far apart (monotonic seconds), so a
+        # token revoked over and over (another client logging in with the same
+        # account) does not turn into a login storm.
+        self._relogin_min_interval = relogin_min_interval
+        self._last_login_at: float | None = None
+        self._login_lock = asyncio.Lock()
+        self._clock = time.monotonic
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -84,6 +96,7 @@ class AutoxingAPIClient:
         AutoXing web app (captured from browser traffic or Postman collection).
         It is sent as-is — no additional encryption is performed here.
         """
+        self._last_login_at = self._clock()
         # Step 1 — Login
         resp = await self._http.post(
             "/user/v1.1/login",
@@ -133,9 +146,31 @@ class AutoxingAPIClient:
         logger.info("AutoXing login OK (token valid for ~%.0f days)", expire_s / 86400)
 
     async def _ensure_token(self) -> None:
-        if not self._token or time.time() >= self._token_expires_at:
-            logger.info("AutoXing token expired or missing — refreshing")
+        if self._token and time.time() < self._token_expires_at:
+            return
+        async with self._login_lock:
+            if self._token and time.time() < self._token_expires_at:
+                return  # another caller logged in while we waited
+            if self._last_login_at is not None:
+                wait = self._last_login_at + self._relogin_min_interval - self._clock()
+                if wait > 0:
+                    raise RuntimeError(f"AutoXing token missing; next login allowed in {wait:.0f} s")
+            logger.info("AutoXing token expired, missing or rejected — logging in")
             await self.login()
+
+    def _invalidate_token(self, path: str) -> None:
+        if self._token is not None:
+            logger.warning("AutoXing answered 401 on %s — logging in again on the next call", path)
+        self._token = None
+
+    async def _on_response(self, response: httpx.Response) -> None:
+        """A 401 from the API (not from the login itself) means the token is
+        expired or revoked, for instance by another client logging in with the
+        same account. Drop it so the next call logs in again, instead of
+        waiting for the clock (up to ~6 days)."""
+        path = response.request.url.path
+        if response.status_code == 401 and not path.startswith("/user/"):
+            self._invalidate_token(path)
 
     def _api_headers(self) -> dict[str, str]:
         return {
@@ -149,6 +184,9 @@ class AutoxingAPIClient:
     # ------------------------------------------------------------------
 
     def _check(self, body: dict, path: str) -> None:
+        if body.get("status") == 401:
+            # Same as an HTTP 401, reported in the body.
+            self._invalidate_token(path)
         if body.get("status") != 200:
             raise ValueError(
                 f"AutoXing API error on {path}: {body.get('message')} (status={body.get('status')})"
