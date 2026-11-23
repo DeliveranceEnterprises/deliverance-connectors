@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 # How often to refresh static metadata (robot model, app version).
 METADATA_POLL_INTERVAL_S = 60.0
+# Bounded, spaced retries for the per-task report fetch.
+MAX_REPORT_ATTEMPTS = 5
+REPORT_RETRY_INTERVAL_S = 30.0
 
 
 class DataPoller:
@@ -204,51 +207,63 @@ class DataPoller:
 
         # Once the task is terminal, fetch the task detail (task/info, keyed by
         # taskNo) for the report.  We retry while the report is still missing -
-        # SPACED by _REPORT_RETRY_INTERVAL_S (not every poll), bounded by
-        # _MAX_REPORT_ATTEMPTS - so the robot has time to finalise taskDistance
+        # SPACED by REPORT_RETRY_INTERVAL_S (not every poll), bounded by
+        # MAX_REPORT_ATTEMPTS - so the robot has time to finalise taskDistance
         # and a transient error does not leave the report permanently empty.
-        _TERMINAL = {4, 5, 6}
-        _MAX_REPORT_ATTEMPTS = 5
-        _REPORT_RETRY_INTERVAL_S = 30.0
         now_monotonic = time.monotonic()
         due = (
             state.task_report_attempts == 0
-            or now_monotonic - state.task_report_last_attempt >= _REPORT_RETRY_INTERVAL_S
+            or now_monotonic - state.task_report_last_attempt >= REPORT_RETRY_INTERVAL_S
         )
         if (
-            state.task_status in _TERMINAL
+            state.task_status in TERMINAL_TASK_STATUSES
             and state.task_report is None
             and state.task_start_ts
-            and state.task_report_attempts < _MAX_REPORT_ATTEMPTS
+            and state.task_report_attempts < MAX_REPORT_ATTEMPTS
             and due
         ):
             state.task_report_attempts += 1
             state.task_report_last_attempt = now_monotonic
             try:
                 info = await self._client.get_task_info(state.task_no)
-                if info:
-                    subtasks = info.get("subTaskInfoList") or []
-                    # Sum per-point distances (metres) for total task mileage.
-                    mileage = 0.0
-                    for st in subtasks:
-                        try:
-                            mileage += float(st.get("taskDistance") or 0)
-                        except (TypeError, ValueError):
-                            pass
-                    point_name = subtasks[-1].get("pointName") if subtasks else None
-                    state.task_report = {
-                        "task_mileage": mileage,
-                        "task_mode": info.get("taskType"),
-                        "point_name": point_name,
-                        "task_state": info.get("taskState"),
-                    }
-                    logger.info(
-                        "Fetched task report for %s: %s", state.task_no, state.task_report
-                    )
-                else:
-                    logger.info(
-                        "No task/info yet for %s (attempt %d/%d)",
-                        state.task_no, state.task_report_attempts, _MAX_REPORT_ATTEMPTS,
-                    )
             except Exception as exc:
                 logger.warning("Failed to fetch task report for %s: %s", state.task_no, exc)
+                return
+            if not info:
+                logger.info(
+                    "No task/info yet for %s (attempt %d/%d)",
+                    state.task_no, state.task_report_attempts, MAX_REPORT_ATTEMPTS,
+                )
+                return
+            report = build_task_report(info)
+            last_attempt = state.task_report_attempts >= MAX_REPORT_ATTEMPTS
+            # A completed task whose distance is still 0 has not been finalised
+            # by the robot yet: keep retrying instead of freezing an empty report.
+            # On the last attempt keep whatever we have.
+            if not report["task_mileage"] and state.task_status == 4 and not last_attempt:
+                logger.info(
+                    "Task report for %s still incomplete (attempt %d/%d), retrying",
+                    state.task_no, state.task_report_attempts, MAX_REPORT_ATTEMPTS,
+                )
+                return
+            state.task_report = report
+            logger.info("Fetched task report for %s: %s", state.task_no, state.task_report)
+
+
+def build_task_report(info: dict) -> dict:
+    """Build the per-task report from a task/info payload."""
+    subtasks = info.get("subTaskInfoList") or []
+    # Sum per-point distances (metres) for total task mileage.
+    mileage = 0.0
+    for st in subtasks:
+        try:
+            mileage += float(st.get("taskDistance") or 0)
+        except (TypeError, ValueError):
+            pass
+    point_name = subtasks[-1].get("pointName") if subtasks else None
+    return {
+        "task_mileage": mileage,
+        "task_mode": info.get("taskType"),
+        "point_name": point_name,
+        "task_state": info.get("taskState"),
+    }

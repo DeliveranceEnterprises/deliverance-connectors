@@ -100,8 +100,10 @@ WATER_TANK_STATE_MAP: dict[int, str] = {
     3: "full",
 }
 
-# Task statuses that indicate the task is no longer active
-TERMINAL_TASK_STATUSES = {0, 4, 5}
+# Task statuses that indicate the task is no longer active: failed, completed,
+# cancelled. 6 (target_reached) is NOT terminal: the robot is still on the task.
+# Single source of truth for the poller, the webhook and the connector.
+TERMINAL_TASK_STATUSES: frozenset[int] = frozenset({0, 4, 5})
 
 
 def detect_robot_type(robot_model: str | None) -> str:

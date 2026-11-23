@@ -25,6 +25,7 @@ from keenon_connector.src.api.models import (
     ROBOT_STATE_MAP,
     TANK_STATE_MAP,
     TASK_STATUS_MAP,
+    TERMINAL_TASK_STATUSES,
     WATER_TANK_STATE_MAP,
     RobotState,
     keenon_map_origin,
@@ -234,7 +235,6 @@ class KeenonConnector(FleetConnector):
         6: "Mission",   # target_reached
         7: "Mission",   # waiting
     }
-    _TERMINAL_TASK_STATUSES = frozenset({0, 4, 5})  # failed, completed, cancelled
 
     def _compute_mission_status(self, state: "RobotState") -> str:
         """Return the mode string published as the mission_status key-value.
@@ -260,7 +260,7 @@ class KeenonConnector(FleetConnector):
         if (
             state.task_no
             and state.task_status is not None
-            and state.task_status not in self._TERMINAL_TASK_STATUSES
+            and state.task_status not in TERMINAL_TASK_STATUSES
         ):
             return self._MODE_FROM_TASK_STATUS.get(state.task_status, "Mission")
         # At dock: available = Idle, unavailable = Charging
