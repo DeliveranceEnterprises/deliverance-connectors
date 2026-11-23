@@ -364,10 +364,28 @@ def test_new_run_waits_for_robot_start_time_then_falls_back() -> None:
     ws._on_device_status(_device_status_body("Operating", have_task=True))
     assert connector._build_mission_report(state) is None  # inside the grace window
 
-    state.run_seen_at -= 10.0  # grace elapsed without a robot startTime
+    state.run_seen_at -= 10.0  # a few seconds without a robot startTime: still waiting
+    assert connector._build_mission_report(state) is None
+
+    state.run_seen_at -= AllybotConnector._START_TS_GRACE_S  # grace elapsed without one
     report = connector._build_mission_report(state)
     assert report is not None and report["startTs"] == state.task_start_ts
     assert connector._build_mission_report(state)["startTs"] == report["startTs"]  # stable
+
+
+def test_a_connector_restart_mid_run_keeps_the_same_mission_id() -> None:
+    """The missionId comes from the robot's start time, not from when the connector saw the run."""
+    ids = []
+    for _restart in range(2):
+        connector = _make_connector()  # fresh state, as after a restart
+        ws = _ws_for(connector)
+        state = connector._robot_states[ROBOT_ID]
+        ws._on_device_status(_device_status_body("Operating", have_task=True))
+        state.run_seen_at -= 10.0  # the robot's start time comes some seconds later
+        assert connector._build_mission_report(state) is None
+        ws._on_task_status(_task_status_body(1_000_000))
+        ids.append(connector._build_mission_report(state)["missionId"])
+    assert ids == ["task-A_1000000", "task-A_1000000"]
 
 
 def test_dispatched_task_is_not_published_until_robot_reports_running() -> None:

@@ -277,8 +277,12 @@ class AllybotConnector(FleetConnector):
     }
 
     # A new run waits this long for the robot's own startTime (it arrives in the
-    # devicestasktatus WS stream) before falling back to the connector's clock.
-    _START_TS_GRACE_S = 5.0
+    # devicestasktatus WS stream, ~1 Hz while the task runs) before falling back to
+    # the connector's clock. The missionId is built from that start time, so the
+    # robot's value keeps it the same across connector restarts; the fallback does
+    # not (a restart mid-run would publish the run again under a new id), so it is
+    # kept for a robot that never reports one, and the window is generous.
+    _START_TS_GRACE_S = 120.0
     # After a run finishes its final report is republished for this long, then
     # dropped: InOrbit keeps the last mission_tracking value, and republishing
     # it every second with endTs=now made the finished mission's end time creep
@@ -306,6 +310,11 @@ class AllybotConnector(FleetConnector):
             if waiting:
                 return None
             state.task_start_ts = now_ms  # stable fallback: set once, not every cycle
+            self._logger.warning(
+                "No start time from the robot after %.0fs for task %s: using the connector's "
+                "clock (the missionId will change if the connector restarts during this run)",
+                self._START_TS_GRACE_S, state.task_id,
+            )
 
         if not in_progress:
             if state.task_end_ts is None:
@@ -341,7 +350,9 @@ class AllybotConnector(FleetConnector):
         start_ts = state.task_start_ts
         # Suffix with startTs so each cleaning run gets a unique missionId.
         # Without this InOrbit deduplicates by missionId and overwrites the
-        # same 2 entries instead of creating a new one per run.
+        # same 2 entries instead of creating a new one per run. startTs is the
+        # robot's own start time (see _START_TS_GRACE_S), so a connector restart
+        # mid-run keeps publishing the same missionId.
         mission_id = f"{state.task_id}_{start_ts}" if state.task_id else None
         report: dict = {
             "missionId": mission_id,
