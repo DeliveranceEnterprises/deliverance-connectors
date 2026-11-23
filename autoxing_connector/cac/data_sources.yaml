@@ -13,6 +13,7 @@ metadata:
 spec:
   label: Battery
   unit: "%"
+  scale: 100
   source:
     keyValue:
       key: battery
@@ -66,7 +67,6 @@ metadata:
 spec:
   label: Localization Quality
   unit: "%"
-  scale: 0.01
   source:
     keyValue:
       key: loc_quality

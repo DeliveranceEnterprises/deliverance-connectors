@@ -16,6 +16,6 @@ spec:
     actions:
       - autoxing-go-to-a
       - autoxing-go-to-b
-      - autoxing-go-to-home
-      - autoxing-go-home
+      - autoxing-go-to-home   # navigate to the Home standby POI
+      - autoxing-go-home      # return to the charging pile (go_home task)
       - autoxing-cancel-task

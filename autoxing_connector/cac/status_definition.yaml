@@ -3,9 +3,12 @@
 # SPDX-License-Identifier: MIT
 
 # StatusDefinition objects for Autoxing connector.
-# battery publishes 0–1 float → thresholds in 0–1.
-# loc_quality publishes 0–100 int, scale: 0.01 → post-scale 0–1.
-# Boolean fields use EQUALS false → ERROR.
+# Thresholds compare the published value, before the data source's display
+# scale (same convention as the other connectors):
+# battery publishes a 0–1 float (shown as % with scale: 100) → thresholds in 0–1.
+# loc_quality publishes AutoXing's 0–100 integer as is → thresholds in 0–100.
+# Boolean rules: EQUALS true → ERROR/WARNING for faults (emergency stop,
+# obstruction); EQUALS false → ERROR for health flags (api_connected).
 
 apiVersion: v0.1
 kind: StatusDefinition
@@ -32,11 +35,11 @@ spec:
   rules:
     - function: BELOW
       params:
-        - 0.50
+        - 50
       status: ERROR
     - function: BELOW
       params:
-        - 0.80
+        - 80
       status: WARNING
 ---
 apiVersion: v0.1
