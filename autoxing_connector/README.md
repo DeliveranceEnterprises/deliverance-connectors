@@ -103,6 +103,13 @@ The Docker Compose setup supports environment variable configuration via `config
 
 The connector keeps a small file, `task_start_ts_cache.json`, under `connector_config.data_dir` (environment variable `INORBIT_AUTOXING_DATA_DIR`, default `data`, relative to the working directory). It records when each AutoXing task started and whether its mission is already closed, so a restart keeps each mission's start time and does not reopen finished missions. Entries older than 7 days are dropped. In Docker the directory is `/app/data`; the example compose file mounts a volume there, so keep it (one volume per connector instance).
 
+### Running alongside deliverance-integrations-autoxing
+
+This connector and the `deliverance-integrations-autoxing` service can run against the same AutoXing organisation, but keep in mind:
+
+- **Use a dedicated AutoXing account for each.** Both use the web login, and a login can revoke the token held by the other process. The connector logs in again after a 401, at most once every `connector_config.relogin_min_interval` seconds (default 60), but two processes sharing one account keep revoking each other's token, and calls fail in between.
+- **Both poll the same API.** Each one polls the robot state of every robot about once per second, so running both doubles the load on the AutoXing API and its rate limits. AutoXing has also been seen to drop `taskObj` for a cycle or two while two clients poll it; the connector waits 3 polls before taking a vanished task as finished.
+
 ## Contributing
 
 Any contribution that you make to this repository will be under the MIT license, as dictated by that [license](https://opensource.org/licenses/MIT).
