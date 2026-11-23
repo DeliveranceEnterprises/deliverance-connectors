@@ -98,3 +98,42 @@ class RobotState:
     # InOrbit treats it as an update to the same mission rather than a new one.
     # Cleared only when a genuinely different task_id appears.
     _task_start_ts_cache: dict = field(default_factory=dict)
+
+    # Task whose terminal mission_tracking has already been published. AutoXing
+    # keeps showing a finished task in taskObj (isFinish=true) for a while; that
+    # lingering taskObj must not be taken for a new task, or the mission would
+    # flip back to Executing under the same missionId.
+    _closed_task_id: str | None = None
+
+    def begin_task(self, task_id: str, start_ts: int, name: str | None = None) -> None:
+        """Start tracking a new task, dropping everything left from the previous one."""
+        self.task_id = task_id
+        self.task_name = name
+        self.task_start_ts = start_ts
+        self.task_is_finish = False
+        self.task_is_cancel = False
+        self.task_mileage = None
+        self.task_total_dis = None
+        self.task_duration = None
+        self.task_target_name = None
+        self.task_type = None
+        self.task_detail_fetched = None
+        self.task_target_x = None
+        self.task_target_y = None
+        self.task_back_name = None
+        self.task_back_x = None
+        self.task_back_y = None
+        self.task_origin_x = None
+        self.task_origin_y = None
+        self.task_area_id = None
+        self.task_building_id = None
+        self._task_absent_polls = 0
+        self._task_ready = False
+        self._task_detail_attempts = 0
+
+    def close_task(self) -> None:
+        """Forget the current task once its terminal mission has been published."""
+        self._closed_task_id = self.task_id
+        self.task_id = None
+        self.task_name = None
+        self.task_start_ts = None

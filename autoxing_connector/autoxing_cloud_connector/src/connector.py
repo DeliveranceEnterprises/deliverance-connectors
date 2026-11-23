@@ -183,7 +183,11 @@ class AutoxingCloudConnector(FleetConnector):
 
         kv["mission_status"] = self._compute_mission_status(state)
 
-        if state.task_id and state._task_ready:
+        # A terminal task is published even if its detail never arrived (a
+        # short task can finish before the detail fetch succeeds): its mission
+        # must not be dropped for lack of a label.
+        terminal = bool(state.task_id and (state.task_is_finish or state.task_is_cancel))
+        if state.task_id and (state._task_ready or terminal):
             kv["mission_tracking"] = self._build_mission_report(robot_id, state)
 
         self.publish_robot_key_values(robot_id, **kv)
@@ -193,10 +197,10 @@ class AutoxingCloudConnector(FleetConnector):
         # once it stops receiving updates; a mission re-sent every cycle never
         # "settles", so the LAST task of a burst would otherwise stay unindexed
         # until the next task starts. Clearing here lets it settle immediately.
-        if state.task_id and (state.task_is_finish or state.task_is_cancel):
-            state.task_id = None
-            state.task_name = None
-            state.task_start_ts = None
+        # The poller remembers the closed task so a lingering taskObj does not
+        # reopen it.
+        if terminal and "mission_tracking" in kv:
+            state.close_task()
 
     _MISSION_STATE: dict[str, str] = {
         "executing": "Executing",
@@ -378,11 +382,7 @@ class AutoxingCloudConnector(FleetConnector):
                         stderr="AutoXing API did not return a task ID",
                     )
                 await self._api_client.execute_task(task_id)
-                state.task_id = task_id
-                state.task_name = task_payload["name"]
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(task_id, int(time.time() * 1000), task_payload["name"])
 
             case CustomScripts.GO_HOME:
                 task_payload = {
@@ -399,11 +399,7 @@ class AutoxingCloudConnector(FleetConnector):
                         stderr="AutoXing API did not return a task ID for go_home",
                     )
                 await self._api_client.execute_task(task_id)
-                state.task_id = task_id
-                state.task_name = "Return to charger"
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(task_id, int(time.time() * 1000), "Return to charger")
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)
@@ -419,10 +415,7 @@ class AutoxingCloudConnector(FleetConnector):
             case CustomScripts.EXECUTE_TASK:
                 cmd = ExecuteTaskCommand.model_validate(script_args)
                 await self._api_client.execute_task(cmd.task_id)
-                state.task_id = cmd.task_id
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(cmd.task_id, int(time.time() * 1000))
 
             case _:
                 raise CommandFailure(

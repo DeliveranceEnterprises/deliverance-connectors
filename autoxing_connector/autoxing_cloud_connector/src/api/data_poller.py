@@ -204,49 +204,41 @@ class DataPoller:
         # avoid creating duplicate missions in InOrbit.
         _TASK_ABSENT_GRACE = 3
 
+        if task_id and task_id == state._closed_task_id:
+            # The terminal mission of this task is already published; AutoXing
+            # just has not dropped it from taskObj yet. Ignore it.
+            task_id = None
+            task_obj = {}
+
         if task_id and task_id != state.task_id:
-            # New task_id (or same task_id reappearing after a false terminal).
-            # Reuse the cached start_ts (loaded from disk on startup) so the
-            # missionId is stable across connector restarts.
+            # New task_id. Reuse the cached start_ts (loaded from disk on
+            # startup) so the mission's startTs is stable across restarts.
             # Only evict the old task_id from cache when a genuinely new one arrives.
             if state.task_id and state.task_id != task_id:
                 state._task_start_ts_cache.pop(state.task_id, None)
                 self._ts_cache.pop(state.task_id, None)
-            state._task_absent_polls = 0
-            state.task_id = task_id
             if task_id not in state._task_start_ts_cache:
                 state._task_start_ts_cache[task_id] = int(time.time() * 1000)
                 self._ts_cache[task_id] = state._task_start_ts_cache[task_id]
                 _save_ts_cache(self._ts_cache)
-            state.task_start_ts = state._task_start_ts_cache[task_id]
-            state.task_is_finish = False
-            state.task_is_cancel = False
-            # Reset execution metrics and detail fields for the new task.
-            state.task_mileage = None
-            state.task_total_dis = None
-            state.task_duration = None
-            state.task_target_name = None
-            state.task_type = None
-            state._task_ready = False
-            state._task_detail_attempts = 0
-            state.task_detail_fetched = None
-            state.task_target_x = None
-            state.task_target_y = None
-            state.task_back_name = None
-            state.task_back_x = None
-            state.task_back_y = None
-            state.task_origin_x = None
-            state.task_origin_y = None
-            state.task_area_id = None
-            state.task_building_id = None
+            state.begin_task(task_id, state._task_start_ts_cache[task_id])
+            # The first sighting may already be terminal (a short task, or a
+            # task that finished while the connector was down).
+            state.task_is_finish = bool(task_obj.get("isFinish"))
+            state.task_is_cancel = bool(task_obj.get("isCancel"))
         elif task_id:
             state._task_absent_polls = 0
-            state.task_is_finish = task_obj.get("isFinish", False)
-            state.task_is_cancel = task_obj.get("isCancel", False)
+            # Once terminal, stay terminal: a flapping flag must not reopen the
+            # mission, and a cancel sent by the connector is kept even if the
+            # API has not reflected it yet.
+            state.task_is_finish = bool(state.task_is_finish or task_obj.get("isFinish"))
+            state.task_is_cancel = bool(state.task_is_cancel or task_obj.get("isCancel"))
         elif not task_id and state.task_id:
             state._task_absent_polls += 1
             if state._task_absent_polls >= _TASK_ABSENT_GRACE:
-                # Task cleared by robot after grace period
+                # Task cleared by robot after grace period. task_is_cancel keeps
+                # its last known value, so a cancelled task whose taskObj
+                # vanished is still reported as Canceled, not Completed.
                 state.task_is_finish = True
                 state._task_absent_polls = 0
                 # Keep task_id so connector can publish final mission_tracking
