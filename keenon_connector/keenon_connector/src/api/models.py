@@ -6,6 +6,7 @@
 
 import math
 import struct
+import time
 from dataclasses import dataclass, field
 
 # Standard Keenon map resolution (metres per pixel), confirmed empirically.
@@ -168,7 +169,7 @@ class RobotState:
     task_status: int | None = None  # see TASK_STATUS_MAP
     task_start_ts: int | None = None  # ms timestamp when task was dispatched
     task_end_ts: int | None = None    # ms timestamp, fixed when the task is first seen finished
-    task_name: str | None = None    # human-readable label (e.g. "Send to Mesa 1")
+    task_name: str | None = None    # human-readable label (e.g. "Send to Table 1")
     task_group: str | None = None   # action group (e.g. "Delivery", "Cleaning", "Hotel")
     task_report: dict | None = None  # fetched from Keenon API after task completes
     task_report_attempts: int = 0    # bounded retries for the report fetch
@@ -186,3 +187,31 @@ class RobotState:
     # Connectivity
     api_connected: bool = False
     last_update: float = field(default=0.0)
+
+    def start_task(
+        self,
+        task_no: str | None,
+        status: int | None = None,
+        name: str | None = None,
+        group: str | None = None,
+    ) -> None:
+        """Track a new task, resetting every per-task field of the previous one."""
+        self.task_no = task_no
+        self.task_status = status
+        self.task_start_ts = int(time.time() * 1000)
+        self.task_end_ts = None
+        self.task_name = name
+        self.task_group = group
+        self.task_report = None
+        self.task_report_attempts = 0
+        self.task_report_last_attempt = 0.0
+
+
+def parse_task_state(value) -> int | None:
+    """Coerce a task state given as int or numeric string (webhooks) to int."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

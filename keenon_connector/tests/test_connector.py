@@ -340,3 +340,25 @@ def test_no_emergency_signal_leaves_every_other_mode_as_it_was() -> None:
             _state(task_status=0, charge_status=1, can_be_called=False, clean_scram=scram)) == "Charging"
         assert connector._compute_mission_status(
             _state(task_status=0, charge_status=0, can_be_called=True, clean_scram=scram)) == "Idle"
+
+
+def test_webhook_for_a_new_task_resets_every_per_task_field() -> None:
+    from keenon_connector.src.api.webhook_receiver import KeenonWebhookReceiver
+
+    connector = _make_connector()
+    state = connector._robot_states["robot-1"]
+    state.task_no, state.task_group = "old", "Cleaning"
+    state.task_report, state.task_report_attempts = {"task_mileage": 3.0}, 2
+    state.task_report_last_attempt = 123.0
+    receiver = KeenonWebhookReceiver.__new__(KeenonWebhookReceiver)
+    receiver._fleet_sn_to_robot_id = connector._fleet_sn_to_robot_id
+    receiver._robot_states = connector._robot_states
+
+    # taskState given as a string is coerced to int
+    receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": "3"})
+    assert state.task_no == "new" and state.task_status == 3
+    assert state.task_group is None and state.task_report is None
+    assert state.task_report_attempts == 0 and state.task_report_last_attempt == 0.0
+
+    receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": "4"})
+    assert state.task_status == 4

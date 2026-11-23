@@ -357,30 +357,16 @@ class KeenonConnector(FleetConnector):
                     scene_code=cmd.scene_code,
                     robot_type=robot_type,
                 )
-                state.task_no = task_no
-                state.task_status = 1  # queued
-                state.task_start_ts = int(time.time() * 1000)
-                state.task_end_ts = None
-                state.task_name = cmd.label or None
-                state.task_group = cmd.group or None
-                state.task_report = None
-                state.task_report_attempts = 0
-                state.task_report_last_attempt = 0.0
+                state.start_task(
+                    task_no, status=1, name=cmd.label or None, group=cmd.group or None
+                )  # 1 = queued
 
             case CustomScripts.RETURN_TO_ORIGIN:
                 task_no = await self._api_client.return_to_origin(
                     store_id=robot_cfg.store_id,
                     robot_id=fleet_id,
                 )
-                state.task_no = task_no
-                state.task_status = 1
-                state.task_start_ts = int(time.time() * 1000)
-                state.task_end_ts = None
-                state.task_name = "Return to Origin"
-                state.task_group = "Delivery"
-                state.task_report = None
-                state.task_report_attempts = 0
-                state.task_report_last_attempt = 0.0
+                state.start_task(task_no, status=1, name="Return to Origin", group="Delivery")
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)
