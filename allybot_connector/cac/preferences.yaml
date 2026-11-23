@@ -16,7 +16,7 @@ metadata:
 spec:
   navigationWidget:
     actions:
-      - allybot-clean-espaitec
+      - allybot-clean-default-area
       - allybot-pause-task
       - allybot-resume-task
       - allybot-stop-task

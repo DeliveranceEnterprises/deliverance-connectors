@@ -391,7 +391,7 @@ def _task_status_with_estimate(start_ms: int, total: object, **inner_extra: obje
     inner: dict = {"startTime": start_ms, **inner_extra}
     if total is not None:
         inner["totalTime"] = total
-    return {"robotid": SERIAL, "taskId": "task-A", "name": "Espaitec",
+    return {"robotid": SERIAL, "taskId": "task-A", "name": "Test Site",
             "taskStatus": 5, "percent": 10, "msg": json.dumps(inner)}
 
 

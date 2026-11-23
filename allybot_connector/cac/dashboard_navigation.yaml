@@ -59,7 +59,7 @@ spec:
     widgets:
     - config:
         actionIds:
-        - allybot-clean-espaitec
+        - allybot-clean-default-area
         - allybot-pause-task
         - allybot-resume-task
         - allybot-stop-task
