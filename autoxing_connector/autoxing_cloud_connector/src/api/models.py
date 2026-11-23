@@ -93,18 +93,12 @@ class RobotState:
     _task_detail_attempts: int = 0
     _task_detail_next_at: float = 0.0  # monotonic time before which no retry is sent
 
-    # Cache of task_id → task_start_ts (epoch ms) for the current session.
-    # If the API sends a false isFinish=True and the same task_id reappears,
-    # we reuse the original start_ts so the missionId stays identical and
-    # InOrbit treats it as an update to the same mission rather than a new one.
-    # Cleared only when a genuinely different task_id appears.
-    _task_start_ts_cache: dict = field(default_factory=dict)
-
     # Task whose terminal mission_tracking has already been published. AutoXing
     # keeps showing a finished task in taskObj (isFinish=true) for a while; that
     # lingering taskObj must not be taken for a new task, or the mission would
     # flip back to Executing under the same missionId.
     _closed_task_id: str | None = None
+    _closed_task_saved: str | None = None  # last _closed_task_id written to the task cache
 
     def begin_task(self, task_id: str, start_ts: int, name: str | None = None) -> None:
         """Start tracking a new task, dropping everything left from the previous one."""

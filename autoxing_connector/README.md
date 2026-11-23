@@ -99,6 +99,10 @@ The Connector can be run as a containerized application using Docker Compose:
 
 The Docker Compose setup supports environment variable configuration via `config/.env` and allows running multiple connector instances. See `docker/docker-compose.example.yaml` for detailed configuration options.
 
+### Runtime data
+
+The connector keeps a small file, `task_start_ts_cache.json`, under `connector_config.data_dir` (environment variable `INORBIT_AUTOXING_DATA_DIR`, default `data`, relative to the working directory). It records when each AutoXing task started and whether its mission is already closed, so a restart keeps each mission's start time and does not reopen finished missions. Entries older than 7 days are dropped. In Docker the directory is `/app/data`; the example compose file mounts a volume there, so keep it (one volume per connector instance).
+
 ## Contributing
 
 Any contribution that you make to this repository will be under the MIT license, as dictated by that [license](https://opensource.org/licenses/MIT).

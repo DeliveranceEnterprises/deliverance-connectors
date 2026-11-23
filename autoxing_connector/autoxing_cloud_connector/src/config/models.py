@@ -52,6 +52,10 @@ class AutoxingConnectorConfig(BaseSettings):
     api_appcode: str = _API_APPCODE
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Directory for the connector's runtime state (the task start-time cache).
+    # Relative paths resolve against the working directory: /app/data in the
+    # Docker image, where docker-compose.example.yaml mounts a volume.
+    data_dir: str = "data"
 
 
 class AutoxingFleetConnectorConfig(ConnectorConfig):

@@ -37,7 +37,7 @@ ENV PYTHONUNBUFFERED=1
 ENV DEFAULT_CONFIG_FILE=/config/fleet.yaml
 
 # Create directories for persistent data
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/logs /app/data
 
 # Copy the application from the builder image
 COPY --from=builder /app /app

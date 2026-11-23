@@ -85,6 +85,7 @@ class AutoxingCloudConnector(FleetConnector):
             robot_id_to_fleet_id=self._robot_id_to_fleet_id,
             fleet_id_to_robot_id=self._fleet_id_to_robot_id,
             update_freq=self.config.update_freq,
+            data_dir=cfg.data_dir,
         )
         # Pre-populate state before the InOrbit session connects so the SDK
         # never publishes a (0, 0) pose artefact on startup.

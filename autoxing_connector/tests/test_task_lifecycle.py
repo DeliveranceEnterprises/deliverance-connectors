@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
 from autoxing_cloud_connector.src.api import data_poller as dp
 from autoxing_cloud_connector.src.api.models import RobotState
 from autoxing_cloud_connector.src.connector import AutoxingCloudConnector
@@ -45,7 +43,7 @@ class FakeClient:
 class Harness:
     """Runs poll -> publish cycles and records what reached InOrbit."""
 
-    def __init__(self, client: FakeClient) -> None:
+    def __init__(self, client: FakeClient, data_dir=None) -> None:
         self.client = client
         self.state = RobotState()
         self.poller = dp.DataPoller(
@@ -53,6 +51,7 @@ class Harness:
             robot_states={"r1": self.state},
             robot_id_to_fleet_id={"r1": "F1"},
             fleet_id_to_robot_id={"F1": "r1"},
+            data_dir=data_dir,
         )
         self.connector = AutoxingCloudConnector.__new__(AutoxingCloudConnector)
         self.connector._area_names = {}
@@ -78,11 +77,6 @@ class Harness:
             for kv in self.published
             if "mission_tracking" in kv
         ]
-
-
-@pytest.fixture(autouse=True)
-def _cache_in_tmp(tmp_path, monkeypatch):
-    monkeypatch.setattr(dp, "_CACHE_FILE", str(tmp_path / "task_start_ts_cache.json"))
 
 
 async def test_a_finished_task_lingering_in_taskobj_is_not_reopened() -> None:

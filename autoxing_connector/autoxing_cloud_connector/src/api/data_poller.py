@@ -5,13 +5,13 @@
 """Background polling loop for AutoXing robot state."""
 
 import asyncio
-import json
 import logging
-import os
 import time
+from pathlib import Path
 
 from .client import AutoxingAPIClient
 from .models import RobotState
+from .task_cache import CACHE_FILE_NAME, TaskStartCache
 
 logger = logging.getLogger(__name__)
 
@@ -20,25 +20,6 @@ logger = logging.getLogger(__name__)
 # failure. After that the mission goes out without it.
 _TASK_DETAIL_MAX_ATTEMPTS = 3
 _TASK_DETAIL_RETRY_DELAY_S = 5.0
-
-_CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "task_start_ts_cache.json")
-
-
-def _load_ts_cache() -> dict[str, int]:
-    try:
-        with open(_CACHE_FILE) as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def _save_ts_cache(cache: dict[str, int]) -> None:
-    try:
-        with open(_CACHE_FILE, "w") as f:
-            json.dump(cache, f)
-    except Exception as exc:
-        logger.debug("Could not save task_start_ts cache: %s", exc)
-
 
 class DataPoller:
     """Polls the AutoXing API for robot state and updates shared RobotState objects.
@@ -54,6 +35,7 @@ class DataPoller:
         robot_id_to_fleet_id: dict[str, str],
         fleet_id_to_robot_id: dict[str, str],
         update_freq: float = 1.0,
+        data_dir: str | Path | None = None,
     ) -> None:
         self._client = client
         self._robot_states = robot_states
@@ -65,12 +47,11 @@ class DataPoller:
         self._clock = time.monotonic
         # In-flight task detail fetches, one per robot at most.
         self._detail_jobs: dict[str, asyncio.Task] = {}
-        # Persistent cache: task_id → start_ts (epoch ms). Survives restarts so
-        # the same task always gets the same missionId in InOrbit.
-        self._ts_cache: dict[str, int] = _load_ts_cache()
-        # Pre-populate each robot's in-memory cache from disk.
-        for state in robot_states.values():
-            state._task_start_ts_cache = dict(self._ts_cache)
+        # Start time and closed flag of each task, shared by all robots and
+        # kept on disk under data_dir so a restart keeps each mission's
+        # startTs and does not reopen tasks already closed. None: memory only.
+        cache_path = Path(data_dir) / CACHE_FILE_NAME if data_dir is not None else None
+        self._task_cache = TaskStartCache(cache_path)
 
     async def poll_once(self) -> None:
         """Run a single poll cycle synchronously. Call before start() to
@@ -244,30 +225,31 @@ class DataPoller:
         # avoid creating duplicate missions in InOrbit.
         _TASK_ABSENT_GRACE = 3
 
-        if task_id and task_id == state._closed_task_id:
+        # The connector closes a task once its terminal mission is published;
+        # persist that, so a restart does not reopen it either.
+        if state._closed_task_id and state._closed_task_id != state._closed_task_saved:
+            self._task_cache.close(state._closed_task_id)
+            state._closed_task_saved = state._closed_task_id
+
+        if task_id and (task_id == state._closed_task_id or self._task_cache.is_closed(task_id)):
             # The terminal mission of this task is already published; AutoXing
             # just has not dropped it from taskObj yet. Ignore it.
             task_id = None
             task_obj = {}
 
         if task_id and task_id != state.task_id:
-            # New task_id. Reuse the cached start_ts (loaded from disk on
-            # startup) so the mission's startTs is stable across restarts.
-            # Only evict the old task_id from cache when a genuinely new one arrives.
-            if state.task_id and state.task_id != task_id:
-                state._task_start_ts_cache.pop(state.task_id, None)
-                self._ts_cache.pop(state.task_id, None)
-            if task_id not in state._task_start_ts_cache:
-                state._task_start_ts_cache[task_id] = int(time.time() * 1000)
-                self._ts_cache[task_id] = state._task_start_ts_cache[task_id]
-                _save_ts_cache(self._ts_cache)
-            state.begin_task(task_id, state._task_start_ts_cache[task_id])
+            # New task_id. Reuse the cached start_ts so the mission's startTs
+            # is stable across connector restarts.
+            state.begin_task(task_id, self._task_cache.start_ts(task_id))
             # The first sighting may already be terminal (a short task, or a
             # task that finished while the connector was down).
             state.task_is_finish = bool(task_obj.get("isFinish"))
             state.task_is_cancel = bool(task_obj.get("isCancel"))
         elif task_id:
             state._task_absent_polls = 0
+            if task_id not in self._task_cache and state.task_start_ts:
+                # Started by a connector command: record its start time too.
+                self._task_cache.start_ts(task_id, state.task_start_ts)
             # Once terminal, stay terminal: a flapping flag must not reopen the
             # mission, and a cancel sent by the connector is kept even if the
             # API has not reflected it yet.
