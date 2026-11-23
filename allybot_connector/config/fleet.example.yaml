@@ -19,10 +19,10 @@ update_freq: 1.0
 
 connector_config:
   # Ally Fleet server base URL (host + port).
-  base_url: http://116.205.178.152:28080
+  base_url: http://<ALLYBOT_SERVER_HOST>:28080
   # Store password in config/.env as INORBIT_ALLYBOT_PASSWORD
-  username: DeliveranceENT
-  # password: Admin123
+  username: <ALLYBOT_USERNAME>
+  # password: <your-password>
 
 fleet:
   - robot_id: allybot-cleaner-1
