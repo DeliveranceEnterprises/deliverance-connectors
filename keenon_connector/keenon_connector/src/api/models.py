@@ -101,6 +101,9 @@ WATER_TANK_STATE_MAP: dict[int, str] = {
     3: "full",
 }
 
+# A clean status older than this is not trusted for the emergency stop.
+CLEAN_STATUS_MAX_AGE_S = 60.0
+
 # Task statuses that indicate the task is no longer active: failed, completed,
 # cancelled. 6 (target_reached) is NOT terminal: the robot is still on the task.
 # Single source of truth for the poller, the webhook and the connector.
@@ -180,6 +183,7 @@ class RobotState:
     clean_sub_state: int | None = None
     clean_faulting: bool | None = None
     clean_scram: bool | None = None
+    clean_status_ts: float = 0.0  # monotonic ts of the last clean-status update
     clean_navigating: bool | None = None
     clean_bilge_tank: int | None = None
     clean_water_tank: int | None = None
@@ -205,6 +209,14 @@ class RobotState:
         self.task_report = None
         self.task_report_attempts = 0
         self.task_report_last_attempt = 0.0
+
+
+def clean_scram_active(state: RobotState, now: float | None = None) -> bool:
+    """True when a fresh clean status reports the emergency stop pressed."""
+    if state.clean_scram is not True:
+        return False
+    now = time.monotonic() if now is None else now
+    return now - state.clean_status_ts <= CLEAN_STATUS_MAX_AGE_S
 
 
 def parse_task_state(value) -> int | None:

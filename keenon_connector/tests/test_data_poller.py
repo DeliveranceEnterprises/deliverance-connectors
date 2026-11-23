@@ -74,3 +74,17 @@ async def test_incomplete_report_is_kept_on_the_last_attempt(monkeypatch) -> Non
         await poller._update_task_status(state, "S1", "SN1")
     assert state.task_report is not None and state.task_report["task_mileage"] == 0.0
     assert poller._client.get_task_info.await_count == dp.MAX_REPORT_ATTEMPTS
+
+
+async def test_failed_clean_status_drops_the_emergency_stop() -> None:
+    client = MagicMock()
+    client.get_robot_status = AsyncMock(return_value=[{"power": 80}])
+    client.get_robot_location = AsyncMock(return_value=None)
+    client.get_clean_robot_status = AsyncMock(side_effect=RuntimeError("HTTP 500"))
+    poller = DataPoller(client, {}, {}, {}, update_freq=1.0)
+    state = RobotState(robot_type="clean", clean_scram=True, clean_status_ts=1.0)
+
+    await poller._refresh_realtime("robot-1", "SN1", "S1", state)
+
+    assert state.api_connected is True  # the other calls succeeded
+    assert state.clean_scram is None

@@ -138,6 +138,8 @@ class DataPoller:
                 await self._update_clean_status(fleet_id, state)
                 any_ok = True
             except Exception as exc:
+                # Don't keep publishing an old emergency stop we can no longer confirm.
+                state.clean_scram = None
                 logger.error("Real-time clean-status failed for %s: %s", robot_id, exc)
 
         if state.task_no:
@@ -187,6 +189,7 @@ class DataPoller:
         gs = cs.get("globalState") or {}
         state.clean_faulting = gs.get("faulting")
         state.clean_scram = gs.get("scram")
+        state.clean_status_ts = time.monotonic()
         ch = cs.get("childState") or {}
         state.clean_navigating = ch.get("navigating")
         hw = cs.get("hardwareState") or {}

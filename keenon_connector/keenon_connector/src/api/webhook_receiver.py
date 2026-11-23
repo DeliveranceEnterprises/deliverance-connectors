@@ -6,6 +6,7 @@
 
 import logging
 import math
+import time
 
 from aiohttp import web
 
@@ -177,6 +178,7 @@ class KeenonWebhookReceiver:
         gs = payload.get("globalState") or {}
         state.clean_faulting = gs.get("faulting")
         state.clean_scram = gs.get("scram")
+        state.clean_status_ts = time.monotonic()
         ch = payload.get("childState") or {}
         state.clean_navigating = ch.get("navigating")
         hw = payload.get("hardwareState") or {}

@@ -28,6 +28,7 @@ from keenon_connector.src.api.models import (
     TERMINAL_TASK_STATUSES,
     WATER_TANK_STATE_MAP,
     RobotState,
+    clean_scram_active,
     keenon_map_origin,
     png_dimensions,
 )
@@ -211,7 +212,7 @@ class KeenonConnector(FleetConnector):
             if state.clean_faulting is not None:
                 kv["clean_faulting"] = state.clean_faulting
             if state.clean_scram is not None:
-                kv["clean_emergency_stop"] = state.clean_scram
+                kv["clean_emergency_stop"] = clean_scram_active(state)
             if state.clean_navigating is not None:
                 kv["clean_navigating"] = state.clean_navigating
             if state.clean_bilge_tank is not None:
@@ -253,11 +254,13 @@ class KeenonConnector(FleetConnector):
           - emergency stop pressed → Emergency (only robots with the cleaning
             module: the signal, globalState.scram, comes from the
             custom/clean/robot/status endpoint; the delivery T10 has no
-            documented e-stop signal, so it never gets this mode)
+            documented e-stop signal, so it never gets this mode). The
+            signal only counts while the clean status is fresh, so a failed
+            or stale clean-status poll cannot leave the robot in Emergency.
         """
         if not state.api_connected:
             return "Error"
-        if state.clean_scram is True:
+        if clean_scram_active(state):
             return "Emergency"
         if (
             state.task_no

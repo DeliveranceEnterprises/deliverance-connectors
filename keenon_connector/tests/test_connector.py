@@ -249,7 +249,10 @@ def test_is_fleet_robot_online_reflects_api_connected() -> None:
 
 
 def _state(**kw) -> RobotState:
-    base = dict(robot_type="food", api_connected=True, task_no="task-1", task_start_ts=1_000)
+    base = dict(
+        robot_type="food", api_connected=True, task_no="task-1", task_start_ts=1_000,
+        clean_status_ts=time.monotonic(),  # clean status just received
+    )
     base.update(kw)
     return RobotState(**base)
 
@@ -362,3 +365,11 @@ def test_webhook_for_a_new_task_resets_every_per_task_field() -> None:
 
     receiver._on_task_state({"robotSn": "AA:BB:CC:DD:EE:FF", "taskNo": "new", "taskState": "4"})
     assert state.task_status == 4
+
+
+def test_stale_emergency_stop_does_not_stick() -> None:
+    connector = _make_connector()
+    stale = time.monotonic() - 3600
+    assert connector._compute_mission_status(
+        _state(clean_scram=True, clean_status_ts=stale, charge_status=0, can_be_called=True)
+    ) == "Idle"
