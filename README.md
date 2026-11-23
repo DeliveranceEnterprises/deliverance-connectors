@@ -115,6 +115,14 @@ See the [wdc\_robot\_sdk README](wdc_robot_sdk/README.md) for details.
 
 ---
 
+## Shared resources and tools
+
+- **[`account_cac/`](account_cac/README.md)** — account-level InOrbit Configuration-as-Code resources shared by all connectors, such as the global Robot and Navigation dashboards. Each vendor keeps its own section in these files; vendor-specific resources stay in each connector's `cac/` folder.
+- **[`tools/robot_diagnostics/`](tools/robot_diagnostics/README.md)** — read-only diagnostics and inventory of the robots configured in the local connector configs, checked against the vendor APIs and InOrbit.
+- **`tools/supervise.sh`** — restarts a connector with exponential backoff when it crashes. See the header of the script for its options.
+
+---
+
 ## Repository Structure
 
 ```
@@ -150,9 +158,13 @@ deliverance-connectors/
 │   │   └── ros2_gazebo/    # Containerized ROS 2 / Gazebo / Nav2 demo environment
 │   ├── office_demo/        # Gazebo office world, SLAM-scanned map, waypoints
 │   └── tests/
-└── wdc_robot_sdk/          # WDC robot bridge (ROS1 node for an InOrbit Agent Core)
-    ├── src/
-    └── cac/
+├── wdc_robot_sdk/          # WDC robot bridge (ROS1 node for an InOrbit Agent Core)
+│   ├── src/
+│   └── cac/
+├── account_cac/            # Account-level InOrbit CaC shared by all connectors (dashboards)
+└── tools/
+    ├── robot_diagnostics/  # Read-only robot diagnostics and inventory
+    └── supervise.sh        # Connector supervisor with exponential backoff
 ```
 
 ## Getting Started
