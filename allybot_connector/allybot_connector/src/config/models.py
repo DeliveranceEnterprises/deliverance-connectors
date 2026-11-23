@@ -41,7 +41,7 @@ class AllybotConfig(BaseSettings):
         extra="allow",
     )
 
-    base_url: str  # e.g. "http://116.205.178.152:28080"
+    base_url: str  # e.g. "http://<ALLYBOT_SERVER_HOST>:28080"
     username: str
     password: str  # stored in plain text; base64 encoding applied internally for App WS
     verify_ssl: bool = True

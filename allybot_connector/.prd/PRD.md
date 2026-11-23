@@ -140,8 +140,8 @@ update_freq: 1.0
 location_tz: Europe/Madrid
 
 connector_config:
-  base_url: http://116.205.178.152:28080
-  username: DeliveranceENT
+  base_url: http://<ALLYBOT_SERVER_HOST>:28080
+  username: <ALLYBOT_USERNAME>
   password: "<your-password>"
   # Optional: direct WS for battery/chassis data (local network only)
   # direct_ws_url: ws://192.168.3.63:29997/robot
