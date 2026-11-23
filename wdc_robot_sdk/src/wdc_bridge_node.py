@@ -24,6 +24,7 @@ import io
 import json
 import math
 import os
+import threading
 import time
 from typing import Optional, Tuple
 
@@ -78,6 +79,13 @@ LOCAL_PGM_YAML_PATH = os.environ.get("WDC_LOCAL_PGM_YAML_PATH", "")
 # GOTO_<NAME> command is refused.
 POINTS_FILE = os.environ.get("WDC_POINTS_FILE", "")
 
+# STOP: stopAction is retried until an "info" reply shows agvStop. Retries
+# are spaced by the confirmation window, because back-to-back writes have
+# made the tablet app restart (about 3 s apart worked).
+STOP_MAX_ATTEMPTS = 3
+STOP_CONFIRM_POLLS = 6
+STOP_CONFIRM_INTERVAL_SEC = 0.5
+
 
 class _RospyLogger:
     """Routes the ROS-free client's log calls to rosout."""
@@ -106,19 +114,26 @@ class WdcBridgeNode:
         self._api = LocalApiClient(LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH, logger=_RospyLogger())
         self._publish_static_laser_tf()
         self._publish_real_map()
-        rospy.Subscriber(CUSTOM_COMMAND_TOPIC, String, self._on_custom_command)
-        # Mission tracking state -- see _mission_tracking() docstring.
+        # Mission tracking state, written by the command callback, the STOP
+        # thread and the poll timer: always accessed under _task_lock.
+        self._task_lock = threading.RLock()
         self._task_id: Optional[str] = None
         self._task_label = ""
         self._task_waypoint = ""
         self._task_start_ts = 0
         self._task_end_ts: Optional[int] = None
+        self._task_final_state = ""
+        self._task_final_status = "OK"
+        self._task_reason = ""
         self._task_was_moving = False
         # Updated every tick, so a new task can snapshot its start position
         # without an extra request.
         self._last_pose: Optional[Tuple[float, float]] = None
         self._task_start_pose: Optional[Tuple[float, float]] = None
         self._task_dest: Optional[Tuple[float, float]] = None
+        self._stop_guard = threading.Lock()
+        self._stop_running = False
+        rospy.Subscriber(CUSTOM_COMMAND_TOPIC, String, self._on_custom_command)
         rospy.Timer(rospy.Duration(POLL_PERIOD_SEC), self._tick)
         rospy.loginfo(
             "wdc_bridge_node started -- polling ws://%s:%d%s every %.1fs",
@@ -359,14 +374,15 @@ class WdcBridgeNode:
         command = (msg.data or "").strip().upper()
         rospy.loginfo("Received custom command: %r", command)
         if command == "STOP":
-            self._api.request("stopAction")
+            self._request_stop()
         elif command == "CHARGE":
             # One extra request for the dock position, used for progress.
             charge_info = self._api.request("info")
             charge_pos = charge_info.get("chargingPosition") if isinstance(charge_info, dict) else None
             dest = (charge_pos["x"], charge_pos["y"]) if isinstance(charge_pos, dict) and "x" in charge_pos else None
             self._start_task("charge", "Go Charge", dest)
-            self._api.request("charging")
+            resp = self._api.request("charging")
+            self._check_command_response(resp, "charging")
         elif command.startswith(GOTO_PREFIX):
             point_name, point = resolve_goto(command, self._points)
             if point is None:
@@ -376,17 +392,65 @@ class WdcBridgeNode:
             rospy.loginfo("Sending robot to point %r (x=%.3f y=%.3f yaw=%.3f)", point_name, x, y, yaw)
             self._start_task(point_name.lower(), f"Go to {point_name.title()}", (x, y))
             resp = self._api.request("navigation", name=point_name, x=x, y=y, yaw=yaw)
-            self._check_nav_response(resp, point_name)
+            self._check_command_response(resp, f"navigation to {point_name!r}")
         else:
             rospy.logwarn("Unrecognized custom command %r -- ignoring", command)
+
+    # -- STOP ------------------------------------------------------------------
+
+    def _request_stop(self) -> None:
+        """Runs the STOP sequence on its own thread, so it never waits behind
+        another command handler."""
+        with self._stop_guard:
+            if self._stop_running:
+                rospy.loginfo("STOP already in progress")
+                return
+            self._stop_running = True
+        threading.Thread(target=self._run_stop, name="wdc-stop", daemon=True).start()
+
+    def _run_stop(self) -> None:
+        """Sends stopAction as a priority request (polling pauses and gives
+        up the connection) and retries until the robot reports agvStop."""
+        try:
+            confirmed = False
+            with self._api.priority():
+                for attempt in range(1, STOP_MAX_ATTEMPTS + 1):
+                    resp = self._api.request("stopAction")
+                    rospy.loginfo("STOP attempt %d/%d sent (reply %r)", attempt, STOP_MAX_ATTEMPTS, resp)
+                    for _ in range(STOP_CONFIRM_POLLS):
+                        time.sleep(STOP_CONFIRM_INTERVAL_SEC)
+                        info = self._api.request("info")
+                        if isinstance(info, dict) and info.get("agvStop") and not self._info_looks_corrupted(info):
+                            confirmed = True
+                            break
+                    if confirmed:
+                        break
+                    rospy.logwarn("STOP attempt %d/%d not confirmed by the robot", attempt, STOP_MAX_ATTEMPTS)
+            if confirmed:
+                rospy.loginfo("STOP confirmed: the robot reports agvStop")
+                self._publish_kv("stop_status", "confirmed")
+                self._end_task("Canceled", "stopped by an operator")
+            else:
+                rospy.logerr(
+                    "STOP FAILED: the robot did not confirm the stop after %d attempts. "
+                    "Stop it at the robot.", STOP_MAX_ATTEMPTS,
+                )
+                self._publish_kv("stop_status", "failed")
+        except Exception as exc:
+            rospy.logerr("STOP FAILED: %s", exc)
+            self._publish_kv("stop_status", "failed")
+        finally:
+            with self._stop_guard:
+                self._stop_running = False
 
     # Sending stopAction automatically before each navigation was tried and
     # reverted: back-to-back writes made the vendor tablet app restart and
     # desynchronised its replies. If revisited, do it only after a BUSY reply,
     # with a gap of about 3 s.
 
-    def _check_nav_response(self, resp, point_name: str) -> None:
-        """Reports the robot's answer to a `navigation` request.
+    def _check_command_response(self, resp, what: str) -> None:
+        """Checks the robot's answer to a command that started a task, and
+        closes the task as Aborted when the command did not go through.
 
         After reaching a point the robot keeps the job pending (readycode
         300) and answers "BUSY" followed by a full-width exclamation mark to
@@ -396,12 +460,18 @@ class WdcBridgeNode:
         """
         if isinstance(resp, str) and "BUSY" in resp.upper():
             rospy.logwarn(
-                "Robot REFUSED navigation to %r -- replied %r. It is busy with a "
-                "pending job (readycode 300); send STOP to clear it, then retry.",
-                point_name, resp,
+                "Robot REFUSED %s -- replied %r. It is busy with a pending job "
+                "(readycode 300); send STOP to clear it, then retry.",
+                what, resp,
             )
-        elif resp is not None:
-            rospy.loginfo("Robot accepted navigation to %r (replied %r)", point_name, resp)
+            self._end_task("Aborted", "refused by the robot: busy", status="error")
+        elif resp is None:
+            rospy.logwarn("No reply from the robot to %s -- marking the task as aborted", what)
+            self._end_task("Aborted", "no reply from the robot", status="error")
+        else:
+            rospy.loginfo("Robot accepted %s (replied %r)", what, resp)
+
+    # -- mission tracking ------------------------------------------------------
 
     def _start_task(self, waypoint_id: str, label: str, dest: Optional[Tuple[float, float]] = None) -> None:
         """Begins tracking a new mission. `dest` is the target (x, y) used for
@@ -409,39 +479,57 @@ class WdcBridgeNode:
 
         A task that is still open is closed as Aborted first: the robot has
         no queue, so a new command replaces the current one."""
-        if self._task_id is not None and self._task_end_ts is None:
-            self._task_end_ts = int(time.time() * 1000)
-            self._publish_tracking_snapshot("Aborted", "interrupted by a new command")
+        with self._task_lock:
+            self._end_task("Aborted", "interrupted by a new command")
+            now_ms = int(time.time() * 1000)
+            self._task_id = f"wdc-nav-{now_ms}"
+            self._task_label = label
+            self._task_waypoint = waypoint_id
+            self._task_start_ts = now_ms
+            self._task_end_ts = None
+            self._task_final_state = ""
+            self._task_final_status = "OK"
+            self._task_reason = ""
+            self._task_was_moving = False
+            self._task_start_pose = self._last_pose
+            self._task_dest = dest
 
-        now_ms = int(time.time() * 1000)
-        self._task_id = f"wdc-nav-{now_ms}"
-        self._task_label = label
-        self._task_waypoint = waypoint_id
-        self._task_start_ts = now_ms
-        self._task_end_ts = None
-        self._task_was_moving = False
-        self._task_start_pose = self._last_pose
-        self._task_dest = dest
+    def _end_task(self, state: str, reason: str = "", status: str = "OK") -> None:
+        """Closes the current task, if open, with a final `state` and
+        publishes it right away."""
+        with self._task_lock:
+            if self._task_id is None or self._task_end_ts is not None:
+                return
+            self._close_task_locked(state, reason, status)
+            tracking = self._tracking_payload()
+        self._publish_kv("mission_tracking", json.dumps(tracking))
 
-    def _publish_tracking_snapshot(self, state: str, reason: str = "") -> None:
-        """Publishes mission_tracking for the current task with a forced
-        `state`. Same shape as _mission_tracking()."""
-        tracking = {
+    def _tracking_payload(self) -> dict:
+        """mission_tracking JSON for the current task. Caller holds
+        _task_lock."""
+        in_progress = self._task_end_ts is None
+        state = "Executing" if in_progress else self._task_final_state
+        data = {"waypoint": self._task_waypoint}
+        if self._task_reason:
+            data["reason"] = self._task_reason
+        return {
             "missionId": self._task_id,
-            "inProgress": False,
+            "inProgress": in_progress,
             "state": state,
             "label": self._task_label,
             "startTs": self._task_start_ts,
-            "data": {"waypoint": self._task_waypoint, "reason": reason} if reason else {"waypoint": self._task_waypoint},
-            "status": "OK",
-            "tasks": [{"taskId": "0", "label": self._task_label, "inProgress": False}],
-            "completedPercent": self._compute_progress(),
+            "data": data,
+            "status": "OK" if in_progress else self._task_final_status,
+            # The task carries its own inProgress and currentTaskId stays
+            # "0" after completion, as in the Keenon payload. With
+            # currentTaskId nulled, InOrbit never closed the task and the
+            # mission stayed "Executing".
+            "tasks": [{"taskId": "0", "label": self._task_label, "inProgress": in_progress}],
+            # Pinned to 1.0 once Completed: arrival is within a radius.
+            "completedPercent": 1.0 if state == "Completed" else self._compute_progress(),
             "currentTaskId": "0",
-            "endTs": self._task_end_ts,
+            "endTs": None if in_progress else self._task_end_ts,
         }
-        msg = String()
-        msg.data = f"mission_tracking={json.dumps(tracking)}"
-        self._custom_data_pub.publish(msg)
 
     def _compute_progress(self) -> float:
         """Progress (0.0-1.0) toward the destination by straight-line
@@ -478,7 +566,8 @@ class WdcBridgeNode:
     def _publish_pose_tf(self, pose) -> None:
         if not pose or "x" not in pose or "y" not in pose:
             return
-        self._last_pose = (pose["x"], pose["y"])
+        with self._task_lock:
+            self._last_pose = (pose["x"], pose["y"])
         t = TransformStamped()
         t.header.stamp = rospy.Time.now()
         t.header.frame_id = "map"
@@ -524,6 +613,13 @@ class WdcBridgeNode:
         bs.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_UNKNOWN
         self._battery_pub.publish(bs)
 
+    def _publish_kv(self, key: str, value) -> None:
+        if value is None:
+            return
+        msg = String()
+        msg.data = f"{key}={value}"
+        self._custom_data_pub.publish(msg)
+
     def _publish_info(self, info) -> None:
         """Publishes fields of the "info" reply as InOrbit key values.
 
@@ -534,25 +630,18 @@ class WdcBridgeNode:
         if not isinstance(info, dict):
             return
 
-        def publish_kv(key: str, value) -> None:
-            if value is None:
-                return
-            msg = String()
-            msg.data = f"{key}={value}"
-            self._custom_data_pub.publish(msg)
-
-        publish_kv("error_code", info.get("errorcode"))
-        publish_kv("localization_confidence", info.get("confidenceCoefficient"))
-        publish_kv("active_map", info.get("mapName"))
-        publish_kv("firmware_version", info.get("version"))
-        publish_kv("charge_step", info.get("chargestep"))
-        publish_kv("charging_current", info.get("chargingCurrent"))
-        publish_kv("agv_stopped", info.get("agvStop"))
-        publish_kv("floor", info.get("floor"))
-        publish_kv("mission_status", self._compute_mission_status(info))
+        self._publish_kv("error_code", info.get("errorcode"))
+        self._publish_kv("localization_confidence", info.get("confidenceCoefficient"))
+        self._publish_kv("active_map", info.get("mapName"))
+        self._publish_kv("firmware_version", info.get("version"))
+        self._publish_kv("charge_step", info.get("chargestep"))
+        self._publish_kv("charging_current", info.get("chargingCurrent"))
+        self._publish_kv("agv_stopped", info.get("agvStop"))
+        self._publish_kv("floor", info.get("floor"))
+        self._publish_kv("mission_status", self._compute_mission_status(info))
         tracking = self._mission_tracking(info)
         if tracking is not None:
-            publish_kv("mission_tracking", json.dumps(tracking))
+            self._publish_kv("mission_tracking", json.dumps(tracking))
 
     @staticmethod
     def _info_looks_corrupted(info: dict) -> bool:
@@ -607,65 +696,39 @@ class WdcBridgeNode:
         itself is detected from movement and tracked as "Manual task", with
         no destination.
         """
-        is_moving = not info.get("agvStop", True)
-        task_open = self._task_id is not None and self._task_end_ts is None
-        if is_moving and not task_open:
-            self._start_task("manual", "Manual task")
+        with self._task_lock:
+            is_moving = not info.get("agvStop", True)
+            task_open = self._task_id is not None and self._task_end_ts is None
+            if is_moving and not task_open:
+                self._start_task("manual", "Manual task")
 
-        if self._task_id is None:
-            return None
+            if self._task_id is None:
+                return None
 
-        # A misrouted reply's errorcode must not abort a real mission.
-        has_error = bool(info.get("errorcode")) and not self._info_looks_corrupted(info)
+            if self._task_end_ts is None:
+                # A misrouted reply's errorcode must not abort a real mission.
+                has_error = bool(info.get("errorcode")) and not self._info_looks_corrupted(info)
+                arrived = False
+                if not is_moving and self._task_dest is not None and self._last_pose is not None:
+                    dx = self._task_dest[0] - self._last_pose[0]
+                    dy = self._task_dest[1] - self._last_pose[1]
+                    arrived = math.hypot(dx, dy) <= ARRIVAL_RADIUS_M
+                if has_error:
+                    self._close_task_locked("Aborted", f"robot error code {info.get('errorcode')}", "error")
+                elif arrived:
+                    self._close_task_locked("Completed")
+                elif self._task_dest is None and self._task_was_moving and not is_moving:
+                    # No destination: fall back to the moving-to-stopped
+                    # transition.
+                    self._close_task_locked("Completed")
+            self._task_was_moving = is_moving
+            return self._tracking_payload()
 
-        arrived = False
-        if not is_moving and self._task_dest is not None and self._last_pose is not None:
-            dx = self._task_dest[0] - self._last_pose[0]
-            dy = self._task_dest[1] - self._last_pose[1]
-            arrived = math.hypot(dx, dy) <= ARRIVAL_RADIUS_M
-
-        if has_error and self._task_end_ts is None:
-            self._task_end_ts = int(time.time() * 1000)
-        elif arrived and self._task_end_ts is None:
-            self._task_end_ts = int(time.time() * 1000)
-        elif (
-            self._task_dest is None
-            and self._task_was_moving
-            and not is_moving
-            and self._task_end_ts is None
-        ):
-            # No destination: fall back to the moving-to-stopped transition.
-            self._task_end_ts = int(time.time() * 1000)
-        self._task_was_moving = is_moving
-
-        in_progress = self._task_end_ts is None
-        if has_error:
-            mission_state = "Aborted"
-        elif in_progress:
-            mission_state = "Executing"
-        else:
-            mission_state = "Completed"
-
-        # Pinned to 1.0 once Completed: arrival is within a radius.
-        completed_percent = 1.0 if mission_state == "Completed" else self._compute_progress()
-
-        return {
-            "missionId": self._task_id,
-            "inProgress": in_progress,
-            "state": mission_state,
-            "label": self._task_label,
-            "startTs": self._task_start_ts,
-            "data": {"waypoint": self._task_waypoint},
-            "status": "error" if has_error else "OK",
-            # The task carries its own inProgress and currentTaskId stays
-            # "0" after completion, as in the Keenon payload. With
-            # currentTaskId nulled, InOrbit never closed the task and the
-            # mission stayed "Executing".
-            "tasks": [{"taskId": "0", "label": self._task_label, "inProgress": in_progress}],
-            "completedPercent": completed_percent,
-            "currentTaskId": "0",
-            "endTs": self._task_end_ts if not in_progress else None,
-        }
+    def _close_task_locked(self, state: str, reason: str = "", status: str = "OK") -> None:
+        self._task_end_ts = int(time.time() * 1000)
+        self._task_final_state = state
+        self._task_final_status = status
+        self._task_reason = reason
 
 
 if __name__ == "__main__":
