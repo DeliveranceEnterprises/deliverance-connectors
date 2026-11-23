@@ -182,6 +182,13 @@ uv run keenon-connector -c config/my_fleet.yaml
 
 Refer to each connector's README for full configuration details.
 
+## Running alongside the Deliverance Platform integrations
+
+The Deliverance Platform integrations (the `deliverance-integrations-*` services) may read the same vendor accounts as these connectors. Keep in mind:
+
+- **One session per account.** Allybot keeps one session per account and Keenon one token per account or app, so a login from one consumer can end another's session. Give each consumer (connector, platform integration, diagnostics tool) its own credentials.
+- **No double import.** A robot imported both directly by a platform integration and through InOrbit (via `deliverance-integrations-inorbit`) appears twice in the platform. Bring each robot in through only one path.
+
 ## Development
 
 All connectors except the WDC bridge follow the same development workflow:
