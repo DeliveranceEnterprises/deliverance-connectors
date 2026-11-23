@@ -4,7 +4,7 @@
 
 """Configuration models for the Allybot connector."""
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from inorbit_connector.models import ConnectorConfig, RobotConfig
@@ -50,6 +50,10 @@ class AllybotConfig(BaseSettings):
     password: str  # stored in plain text; base64 encoding applied internally for App WS
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Minimum seconds between two logins (WebSocket reconnects and commands share it).
+    # Every login invalidates the other sessions of the account; see the README section
+    # "Running alongside deliverance-integrations-allybot".
+    min_relogin_seconds: float = Field(default=60.0, ge=0.0)
 
 
 class AllybotConnectorConfig(ConnectorConfig):

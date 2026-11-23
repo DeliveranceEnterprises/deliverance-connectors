@@ -7,6 +7,7 @@
 import asyncio
 import base64
 import logging
+import time
 
 import httpx
 from tenacity import (
@@ -23,6 +24,13 @@ ALLYBOT_SUCCESS = 619  # most common success code; some endpoints use others
 # A response is successful when message == "success" regardless of code variance.
 
 SESSION_LOST_CODE = 505  # "LOGGED IN SOMEWHERE ELSE"
+
+# Minimum time between two logins of this client. Every login invalidates the token of
+# every other session of the account (another connector, the integration, the phone app),
+# which then logs in again and invalidates ours: without a limit two processes sharing the
+# account keep kicking each other out. Same default as deliverance-integrations-allybot
+# (ALLYBOT_MIN_RELOGIN_SECONDS).
+DEFAULT_MIN_RELOGIN_S = 60.0
 
 
 class AllybotSessionExpired(ValueError):
@@ -76,10 +84,16 @@ class AllybotAPIClient:
         password: str,
         verify_ssl: bool = True,
         timeout: float = 30.0,
+        min_relogin_s: float = DEFAULT_MIN_RELOGIN_S,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._username = username
         self._password = password
+        # Shared by every caller that logs in again (WebSocket reconnects and commands):
+        # at most one mobile login every ``min_relogin_s``. The first login is not limited.
+        self._min_relogin_s = max(0.0, float(min_relogin_s))
+        self._last_login_at: float | None = None  # time.monotonic() of the last attempt
+        self._login_lock = asyncio.Lock()
         self._http = httpx.AsyncClient(
             base_url=self._base_url,
             verify=verify_ssl,
@@ -113,12 +127,32 @@ class AllybotAPIClient:
         WebSocket also handles one that stays open and silent). So the WebSocket calls
         this before every reconnect, which guarantees it opens with a live token. The web-console login that ``login()``
         also tries is skipped: it uses a separate user list and fails for this account.
+
+        Subject to the minimum interval between logins: if the last login was less than
+        ``min_relogin_s`` ago, this waits for the rest of the interval first. Connecting
+        with the old token instead would only end in another reconnect.
         """
-        await self._mobile_login()
-        return self.openid, self.mobile_token
+        async with self._login_lock:
+            remaining = self._relogin_wait_s()
+            if remaining > 0:
+                logger.info(
+                    "Waiting %.0fs before logging in again (at most one login every %.0fs)",
+                    remaining, self._min_relogin_s,
+                )
+                await asyncio.sleep(remaining)
+            await self._mobile_login()
+            return self.openid, self.mobile_token
+
+    def _relogin_wait_s(self) -> float:
+        """Seconds until another login is allowed (0 when it is allowed now)."""
+        if self._last_login_at is None:
+            return 0.0
+        return max(0.0, self._min_relogin_s - (time.monotonic() - self._last_login_at))
 
     async def _mobile_login(self) -> None:
         """POST /fleetapi/account/login with base64-encoded password."""
+        # Counted from the attempt, so failed logins are limited too.
+        self._last_login_at = time.monotonic()
         password_b64 = base64.b64encode(self._password.encode()).decode()
         resp = await self._http.post(
             "/fleetapi/account/login",
@@ -217,12 +251,31 @@ class AllybotAPIClient:
         not: a background poll re-logging in every minute would fight any other
         session (e.g. someone using the phone app) and keep kicking it out. A
         command is an explicit request, so taking the session back is intended.
+
+        The login is the mobile one only (commands use only the mobile token) and is
+        subject to the minimum interval between logins. A command does not wait for
+        it: if this client logged in meanwhile (e.g. a WebSocket reconnect), the
+        retry uses that token; if it is too soon to log in, the command fails.
         """
+        token_used = self.mobile_token
         try:
             return await call()
         except AllybotSessionExpired:
-            logger.warning("Allybot session lost (another login) - logging in again and retrying once")
-            await self.login()
+            async with self._login_lock:
+                if self.mobile_token != token_used:
+                    logger.warning("Allybot session lost - retrying once with the token of a newer login")
+                else:
+                    remaining = self._relogin_wait_s()
+                    if remaining > 0:
+                        raise AllybotSessionExpired(
+                            "Allybot session lost (another login of the same account) and the last "
+                            f"login was less than {self._min_relogin_s:.0f}s ago: not logging in again "
+                            f"for another {remaining:.0f}s. Is another process using this account?"
+                        ) from None
+                    logger.warning(
+                        "Allybot session lost (another login) - logging in again and retrying once"
+                    )
+                    await self._mobile_login()
             return await call()
 
     # ------------------------------------------------------------------

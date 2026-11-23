@@ -75,6 +75,7 @@ class AllybotConnector(FleetConnector):
             password=cfg.password,
             verify_ssl=cfg.verify_ssl,
             timeout=cfg.request_timeout,
+            min_relogin_s=cfg.min_relogin_seconds,
         )
         await self._api_client.login()
 
