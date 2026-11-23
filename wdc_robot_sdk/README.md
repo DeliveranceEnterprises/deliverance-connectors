@@ -100,9 +100,9 @@ The `cac/` directory has the config-as-code for the robot:
   from the distance to the destination. A task started from the tablet itself
   is detected as well, without a known destination.
 - The local API does not tag replies with a request id. The node serializes its
-  own requests and ignores the error code of blank `info` replies, but running
-  a second client against the same port at the same time can still mix up
-  replies.
+  own requests, drops replies whose shape does not match the command, and
+  ignores the error code of blank `info` replies, but running a second client
+  against the same port at the same time can still mix up replies.
 - The robot refuses a new destination while a previous job is pending (the
   reply is `BUSY!`). The node reports it instead of retrying: send `STOP`
   first.

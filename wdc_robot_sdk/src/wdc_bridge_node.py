@@ -24,9 +24,6 @@ import io
 import json
 import math
 import os
-import socket
-import struct
-import threading
 import time
 from typing import Optional, Tuple
 
@@ -39,6 +36,7 @@ from sensor_msgs.msg import BatteryState, LaserScan
 from std_msgs.msg import String
 from tf.transformations import quaternion_from_euler
 
+from wdc_local_api import LocalApiClient
 from wdc_points import GOTO_PREFIX, PointsFileError, load_points, resolve_goto
 
 # The tablet's own IP on the local network -- NOT the isolated network of the
@@ -81,110 +79,13 @@ LOCAL_PGM_YAML_PATH = os.environ.get("WDC_LOCAL_PGM_YAML_PATH", "")
 POINTS_FILE = os.environ.get("WDC_POINTS_FILE", "")
 
 
-class LocalApiClient:
-    """Minimal stdlib WebSocket client for the tablet's `/robot` API.
+class _RospyLogger:
+    """Routes the ROS-free client's log calls to rosout."""
 
-    No WebSocket package is available in the ROS1 image, and the protocol is
-    small (RFC 6455 handshake plus masked text frames). One persistent
-    connection is kept and reopened after any failure.
-    """
-
-    def __init__(self, host: str, port: int, path: str) -> None:
-        self._host = host
-        self._port = port
-        self._path = path
-        self._sock: Optional[socket.socket] = None
-        # One request/response pair at a time: the poll timer and the command
-        # callback share the socket, and replies carry no request id.
-        self._lock = threading.RLock()
-
-    def _connect(self) -> None:
-        sock = socket.create_connection((self._host, self._port), timeout=4)
-        key = base64.b64encode(os.urandom(16)).decode()
-        request = (
-            f"GET {self._path} HTTP/1.1\r\n"
-            f"Host: {self._host}:{self._port}\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            f"Sec-WebSocket-Key: {key}\r\n"
-            "Sec-WebSocket-Version: 13\r\n\r\n"
-        )
-        sock.sendall(request.encode())
-        response = sock.recv(4096)
-        if b"101" not in response.split(b"\r\n", 1)[0]:
-            sock.close()
-            raise ConnectionError(f"WDC local API did not upgrade: {response[:200]!r}")
-        self._sock = sock
-
-    def _send_text(self, message: str) -> None:
-        payload = message.encode()
-        mask = os.urandom(4)
-        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
-        length = len(payload)
-        if length <= 125:
-            header = struct.pack("!BB", 0x81, 0x80 | length)
-        else:
-            header = struct.pack("!BBH", 0x81, 0x80 | 126, length)
-        self._sock.sendall(header + mask + masked)
-
-    def _recv_frame(self, timeout: float = 4.0) -> Optional[bytes]:
-        self._sock.settimeout(timeout)
-        buf = b""
-        while True:
-            chunk = self._sock.recv(65536)
-            if not chunk:
-                return None
-            buf += chunk
-            if len(buf) < 2:
-                continue
-            second_byte = buf[1]
-            masked = second_byte & 0x80
-            length = second_byte & 0x7F
-            idx = 2
-            if length == 126:
-                if len(buf) < 4:
-                    continue
-                length = struct.unpack("!H", buf[2:4])[0]
-                idx = 4
-            elif length == 127:
-                if len(buf) < 10:
-                    continue
-                length = struct.unpack("!Q", buf[2:10])[0]
-                idx = 10
-            needed = idx + (4 if masked else 0) + length
-            if len(buf) < needed:
-                continue
-            if masked:
-                mask = buf[idx:idx + 4]
-                idx += 4
-                payload = bytes(b ^ mask[i % 4] for i, b in enumerate(buf[idx:idx + length]))
-            else:
-                payload = buf[idx:idx + length]
-            return payload
-
-    def request(self, cmd: str, **extra) -> Optional[dict]:
-        """Sends {"cmd": cmd, **extra} and returns the reply's "data" field,
-        or None on any failure. Never raises."""
-        with self._lock:
-            try:
-                if self._sock is None:
-                    self._connect()
-                payload = {"cmd": cmd}
-                payload.update(extra)
-                self._send_text(json.dumps(payload))
-                raw = self._recv_frame()
-                if raw is None:
-                    raise ConnectionError("empty read")
-                return json.loads(raw.decode()).get("data")
-            except Exception as exc:
-                rospy.logwarn("WDC local API request(%s) failed: %s", cmd, exc)
-            try:
-                if self._sock is not None:
-                    self._sock.close()
-            except Exception:
-                pass
-            self._sock = None
-            return None
+    debug = staticmethod(rospy.logdebug)
+    info = staticmethod(rospy.loginfo)
+    warning = staticmethod(rospy.logwarn)
+    error = staticmethod(rospy.logerr)
 
 
 class WdcBridgeNode:
@@ -202,7 +103,7 @@ class WdcBridgeNode:
         self._tf_broadcaster = tf2_ros.TransformBroadcaster()
         self._static_tf_broadcaster = tf2_ros.StaticTransformBroadcaster()
         self._points = self._load_named_points()
-        self._api = LocalApiClient(LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH)
+        self._api = LocalApiClient(LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH, logger=_RospyLogger())
         self._publish_static_laser_tf()
         self._publish_real_map()
         rospy.Subscriber(CUSTOM_COMMAND_TOPIC, String, self._on_custom_command)
