@@ -15,7 +15,7 @@ import aiohttp
 import httpx
 import yaml
 
-from ..common import append_observation, exception_summary
+from ..common import append_observation, exception_summary, find_connector_files
 
 
 # Allybot keeps one session per account: logging in here ends the session of
@@ -34,8 +34,8 @@ def login_allowed(allow_login: bool) -> bool:
     return allow_login or os.getenv(ALLOW_LOGIN_ENV, "").strip().lower() in {"1", "true", "yes"}
 
 
-def load_env_file(path: Path) -> None:
-    if not path.exists():
+def load_env_file(path: Path | None) -> None:
+    if path is None or not path.exists():
         return
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
@@ -66,7 +66,7 @@ def quaternion_to_yaw(qx: float, qy: float, qz: float, qw: float) -> float:
     return 2.0 * math.atan2(qz, qw)
 
 
-def load_config(config_path: Path, env_path: Path) -> dict[str, Any]:
+def load_config(config_path: Path, env_path: Path | None) -> dict[str, Any]:
     load_env_file(env_path)
     with config_path.open(encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
@@ -240,8 +240,7 @@ async def diagnose(
     # Read the opt-in before load_config, so a connector .env file cannot
     # enable it on the operator's behalf.
     may_login = login_allowed(allow_login)
-    config_path = repo_root / "allybot_connector" / "config" / "my_fleet.local.yaml"
-    env_path = repo_root / "allybot_connector" / "config" / ".env.local"
+    config_path, env_path = find_connector_files(repo_root, "allybot_connector")
     config = load_config(config_path, env_path)
     connector_config = config.get("connector_config") or {}
     fleet = select_fleet(config, robot_id, all_robots)

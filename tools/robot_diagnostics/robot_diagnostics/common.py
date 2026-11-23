@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 
@@ -15,6 +16,30 @@ VALIDATION_STATES = {
     "full_flow_ok",
     "failed",
 }
+
+# Looked up in this order under <connector_dir>/config/. The connector READMEs
+# create my_fleet.yaml and .env; *.local.* lets a developer keep a separate copy.
+CONFIG_NAMES = ("my_fleet.local.yaml", "my_fleet.yaml")
+ENV_NAMES = (".env.local", ".env")
+
+
+class ProviderNotConfigured(Exception):
+    """The connector of a provider has no local fleet configuration."""
+
+
+def find_connector_files(repo_root: Path, connector_dir: str) -> tuple[Path, Path | None]:
+    """Return the fleet config and env file of a connector.
+
+    Raises ProviderNotConfigured when no fleet config exists.
+    """
+    config_dir = repo_root / connector_dir / "config"
+    config_path = next((config_dir / name for name in CONFIG_NAMES if (config_dir / name).is_file()), None)
+    if config_path is None:
+        names = " or ".join(f"{connector_dir}/config/{name}" for name in CONFIG_NAMES)
+        raise ProviderNotConfigured(f"no {names}")
+    env_path = next((config_dir / name for name in ENV_NAMES if (config_dir / name).is_file()), None)
+    return config_path, env_path
+
 
 def sanitize_text(value: Any) -> str:
     """Return a printable message with obvious secrets redacted."""

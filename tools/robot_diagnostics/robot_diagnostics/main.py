@@ -6,10 +6,11 @@ import argparse
 import asyncio
 import csv
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
-from .common import append_observation, normalize_validation_statuses
+from .common import ProviderNotConfigured, append_observation, normalize_validation_statuses
 from .inorbit import describe_robots, infer_provider
 from .providers import allybot, autoxing, keenon
 
@@ -199,16 +200,24 @@ async def async_main() -> int:
 
     provider_names = list(PROVIDERS) if args.provider == "all" else [args.provider]
     rows: list[dict[str, Any]] = []
+    not_configured = 0
     for provider_name in provider_names:
-        rows.extend(
-            await PROVIDERS[provider_name](
-                REPO_ROOT,
-                args.robot_id,
-                args.all,
-                args.ws_seconds,
-                allow_login=args.allow_login,
+        try:
+            rows.extend(
+                await PROVIDERS[provider_name](
+                    REPO_ROOT,
+                    args.robot_id,
+                    args.all,
+                    args.ws_seconds,
+                    allow_login=args.allow_login,
+                )
             )
-        )
+        except ProviderNotConfigured as exc:
+            not_configured += 1
+            print(f"[{provider_name}] not configured ({exc}), skipping", file=sys.stderr)
+    if not_configured == len(provider_names):
+        print("No requested provider is configured", file=sys.stderr)
+        return 1
 
     if not args.no_inorbit:
         inorbit, error = describe_robots(Path(args.inorbit_workspace))

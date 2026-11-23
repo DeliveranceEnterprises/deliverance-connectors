@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+from ..common import find_connector_files
+
 
 def _mask(value: str | None, visible: int = 6) -> str | None:
     if value is None:
@@ -28,8 +30,7 @@ async def diagnose(
     ws_seconds: float,
     allow_login: bool = False,
 ) -> list[dict[str, Any]]:
-    config_path = repo_root / "autoxing_connector" / "config" / "my_fleet.local.yaml"
-    env_path = repo_root / "autoxing_connector" / "config" / ".env.local"
+    config_path, env_path = find_connector_files(repo_root, "autoxing_connector")
     with config_path.open(encoding="utf-8") as handle:
         config = yaml.safe_load(handle) or {}
     fleet = list(config.get("fleet") or [])
@@ -39,7 +40,7 @@ async def diagnose(
         fleet = fleet[:1]
 
     connector_config = config.get("connector_config") or {}
-    env_text = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
+    env_text = env_path.read_text(encoding="utf-8") if env_path else ""
     missing = []
     if _placeholder(connector_config.get("login_name")):
         missing.append("login_name")

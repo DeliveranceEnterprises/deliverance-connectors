@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import contextlib
 import csv
+import io
 import json
 import os
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from robot_diagnostics import main
 from robot_diagnostics.common import classify_validation_status, sanitize_text
 from robot_diagnostics.inorbit import parse_describe_robots
 from robot_diagnostics.main import public_row, render_markdown, write_csv, write_json, write_markdown
@@ -305,6 +309,45 @@ class AllybotLoginGuardTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.logins, 1)
         self.assertEqual(rows[0]["allybot_login"], "OK")
+
+
+class NotConfiguredProviderTests(unittest.IsolatedAsyncioTestCase):
+    async def run_main(self, repo_root: Path) -> tuple[int, str, str]:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        argv = ["robot-diagnostics", "--provider", "all", "--all", "--no-inorbit", "--format", "json"]
+        with (
+            mock.patch.object(main, "REPO_ROOT", repo_root),
+            mock.patch.object(sys, "argv", argv),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            code = await main.async_main()
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    async def test_missing_configs_are_reported_and_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            config_dir = repo_root / "keenon_connector" / "config"
+            config_dir.mkdir(parents=True)
+            (config_dir / "my_fleet.yaml").write_text(
+                'fleet:\n  - robot_id: "keenon-robot-1"\n    fleet_robot_id: "fleet-robot-1"\n',
+                encoding="utf-8",
+            )
+
+            code, stdout, stderr = await self.run_main(repo_root)
+
+        self.assertEqual(code, 0)
+        self.assertIn("[allybot] not configured", stderr)
+        self.assertIn("[autoxing] not configured", stderr)
+        self.assertNotIn("[keenon]", stderr)
+        self.assertEqual([row["robot_id"] for row in json.loads(stdout)], ["keenon-robot-1"])
+
+    async def test_no_configured_provider_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _, stderr = await self.run_main(Path(tmp))
+
+        self.assertEqual(code, 1)
+        self.assertIn("[keenon] not configured", stderr)
 
 
 if __name__ == "__main__":
