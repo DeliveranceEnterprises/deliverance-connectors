@@ -202,7 +202,6 @@ class DataPoller:
         task_data = await self._client.get_task_status(state.task_no)
         if not task_data:
             return
-        prev_status = state.task_status
         state.task_status = task_data.get("taskStatus")
         # task_no is intentionally kept after reaching a terminal status so the
         # connector can publish the final mission_tracking state.  It is cleared
