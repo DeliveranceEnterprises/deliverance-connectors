@@ -18,10 +18,10 @@
 # tag -- WDC has no dedicated hardware tag like Keenon/Allybot/Autoxing do,
 # it only carries generic tags.
 #
-# Point-to-point navigation (the A/B/C/D/E buttons + Home on the robot's
-# own tablet UI) -- real coordinates taken from the points saved in the
-# robot's own app, not guessed. See wdc_bridge_node.py's NAMED_POINTS dict
-# for the exact values.
+# Go to Point actions send "GOTO_<NAME>". The coordinates are not here: the
+# node reads them from its points file (WDC_POINTS_FILE, see
+# config/points.example.yaml), and refuses names that are not in it. The
+# actions below match the example file; add one per point of your site.
 
 apiVersion: v0.1
 kind: ActionDefinition
@@ -98,63 +98,6 @@ spec:
       value: inorbit/custom_command
     - name: message
       value: "GOTO_B"
----
-apiVersion: v0.1
-kind: ActionDefinition
-metadata:
-  id: wdc-goto-c
-  scope: robot/rnLasGAxn5CP7bj32/223623373
-spec:
-  type: PublishToTopic
-  label: "Go to Point C"
-  group: Navigation
-  description: Sends the robot to delivery point C.
-  confirmation:
-    required: true
-  lock: false
-  arguments:
-    - name: topic
-      value: inorbit/custom_command
-    - name: message
-      value: "GOTO_C"
----
-apiVersion: v0.1
-kind: ActionDefinition
-metadata:
-  id: wdc-goto-d
-  scope: robot/rnLasGAxn5CP7bj32/223623373
-spec:
-  type: PublishToTopic
-  label: "Go to Point D"
-  group: Navigation
-  description: Sends the robot to delivery point D.
-  confirmation:
-    required: true
-  lock: false
-  arguments:
-    - name: topic
-      value: inorbit/custom_command
-    - name: message
-      value: "GOTO_D"
----
-apiVersion: v0.1
-kind: ActionDefinition
-metadata:
-  id: wdc-goto-e
-  scope: robot/rnLasGAxn5CP7bj32/223623373
-spec:
-  type: PublishToTopic
-  label: "Go to Point E"
-  group: Navigation
-  description: Sends the robot to delivery point E.
-  confirmation:
-    required: true
-  lock: false
-  arguments:
-    - name: topic
-      value: inorbit/custom_command
-    - name: message
-      value: "GOTO_E"
 ---
 apiVersion: v0.1
 kind: ActionDefinition

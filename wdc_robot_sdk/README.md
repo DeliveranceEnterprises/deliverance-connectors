@@ -36,8 +36,8 @@ which are what the actions in `cac/actions.yaml` send:
 
 - `STOP`
 - `CHARGE`
-- `GOTO_<POINT>`, where `<POINT>` is one of the keys of `NAMED_POINTS` in the
-  node (A to E, `HOME`, `RETURN_POINT` and `RECYCLING_POINT`).
+- `GOTO_<POINT>`, where `<POINT>` is a point of the points file (see
+  [Named points](#named-points)). Any other name is refused.
 
 ## Configuration
 
@@ -47,6 +47,7 @@ which are what the actions in `cac/actions.yaml` send:
 | `WDC_LOCAL_API_PORT` | `9015` | Port of the local API |
 | `WDC_LOCAL_PGM_MAP_PATH` | empty | Optional map in `map_server` PGM format |
 | `WDC_LOCAL_PGM_YAML_PATH` | empty | Metadata (`key: value` per line) of that map |
+| `WDC_POINTS_FILE` | empty | YAML file with the named points (the `~points_file` ROS parameter overrides it) |
 
 The map is taken from the robot itself (`cmd: "map"`). If that fails, the node
 uses the PGM and YAML pair when configured, then the static image in
@@ -55,11 +56,30 @@ placeholder map. The map still has
 to be aligned onto the shared floor plan by hand in InOrbit Control's Locations
 editor.
 
+## Named points
+
+The coordinates of the points are site data, so they are not in the code.
+Copy `config/points.example.yaml`, replace the example values with the
+points saved in the robot's own app (map frame, metres, yaw in radians), and
+set `WDC_POINTS_FILE` to the copy. Without a points file, every `GOTO_`
+command is refused.
+
+To add a point:
+
+1. Add it under `points:` in your file, for example
+   `DOCK_2: {x: 1.25, y: -0.5, yaw: 0.0}`. Names are case-insensitive and
+   use letters, digits and underscores.
+2. Add an action to `cac/actions.yaml` that publishes `GOTO_DOCK_2` (copy
+   one of the `wdc-goto-*` actions) and apply it.
+3. Restart the node.
+
+Only list points that are inside the robot's current map.
+
 ## Requirements
 
 - ROS1 with `rospy`, `tf2_ros`, `tf`, `geometry_msgs`, `nav_msgs`,
   `sensor_msgs` and `std_msgs`.
-- [Pillow](https://python-pillow.org/).
+- [Pillow](https://python-pillow.org/) and PyYAML (shipped with ROS1).
 - An InOrbit Agent Core for ROS1 on the same ROS master. Installing it is not
   covered here.
 
@@ -74,9 +94,8 @@ The `cac/` directory has the config-as-code for the robot:
 
 ## Notes and limitations
 
-- The coordinates in `NAMED_POINTS` are the points saved in the robot's own
-  app. They are copied by hand, so they must be updated if the points are
-  redefined in the app.
+- The coordinates in the points file are copied by hand from the robot's
+  app, so they must be updated if the points are redefined there.
 - The local API has no mission history, so the mission progress is computed
   from the distance to the destination. A task started from the tablet itself
   is detected as well, without a known destination.

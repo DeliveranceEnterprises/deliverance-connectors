@@ -39,6 +39,8 @@ from sensor_msgs.msg import BatteryState, LaserScan
 from std_msgs.msg import String
 from tf.transformations import quaternion_from_euler
 
+from wdc_points import GOTO_PREFIX, PointsFileError, load_points, resolve_goto
+
 # The tablet's own IP on the local network -- NOT the isolated network of the
 # robot's embedded computer. Required: there is no default, set
 # WDC_LOCAL_API_HOST to the tablet's address.
@@ -73,25 +75,10 @@ REAL_MAP_JPG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static_
 LOCAL_PGM_MAP_PATH = os.environ.get("WDC_LOCAL_PGM_MAP_PATH", "")
 LOCAL_PGM_YAML_PATH = os.environ.get("WDC_LOCAL_PGM_YAML_PATH", "")
 
-# Real x/y/yaw for every named point, taken from the points saved in the
-# robot's own app (delivery points A-E and the system points). NOT guessed,
-# NOT recorded by physically driving the robot -- these are the robot's own
-# saved coordinates, the same ones its "Delivery Mode" screen uses. Kept as a
-# plain dict here rather than reading the app's storage at runtime, since
-# this bridge cannot touch the Android side beyond the local WebSocket API --
-# if these points are ever redefined in the app, this dict needs updating by
-# hand (same maintenance burden as the hardcoded `point_uuid`/x/y in
-# `keenon_connector/cac/actions.yaml`).
-NAMED_POINTS = {
-    "A": (0.276, 0.612, -0.046),
-    "B": (-0.712, 0.617, -1.260),
-    "C": (3.623, -2.191, -1.024),
-    "D": (4.266, -1.959, 1.969),
-    "E": (4.646, -2.560, 2.103),
-    "HOME": (-0.334, -0.250, -0.000),
-    "RETURN_POINT": (-0.335, -0.250, -0.001),
-    "RECYCLING_POINT": (-0.333, -0.262, 0.001),
-}
+# YAML file with the robot's named points (see config/points.example.yaml).
+# The ~points_file ROS parameter takes precedence. Without a file every
+# GOTO_<NAME> command is refused.
+POINTS_FILE = os.environ.get("WDC_POINTS_FILE", "")
 
 
 class LocalApiClient:
@@ -214,6 +201,7 @@ class WdcBridgeNode:
         self._map_pub = rospy.Publisher("/map", OccupancyGrid, queue_size=1, latch=True)
         self._tf_broadcaster = tf2_ros.TransformBroadcaster()
         self._static_tf_broadcaster = tf2_ros.StaticTransformBroadcaster()
+        self._points = self._load_named_points()
         self._api = LocalApiClient(LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH)
         self._publish_static_laser_tf()
         self._publish_real_map()
@@ -235,6 +223,19 @@ class WdcBridgeNode:
             "wdc_bridge_node started -- polling ws://%s:%d%s every %.1fs",
             LOCAL_API_HOST, LOCAL_API_PORT, LOCAL_API_PATH, POLL_PERIOD_SEC,
         )
+
+    @staticmethod
+    def _load_named_points() -> dict:
+        path = rospy.get_param("~points_file", POINTS_FILE)
+        if not path:
+            rospy.logwarn("No points file configured (WDC_POINTS_FILE): GOTO commands will be refused")
+            return {}
+        try:
+            points = load_points(path)
+        except PointsFileError as exc:
+            raise SystemExit(f"Invalid WDC points file: {exc}")
+        rospy.loginfo("Loaded %d named points from %s: %s", len(points), path, ", ".join(sorted(points)))
+        return points
 
     def _publish_real_map(self) -> None:
         """Publishes the robot's own map (cmd:"map": a base64 JPEG plus
@@ -465,11 +466,10 @@ class WdcBridgeNode:
             dest = (charge_pos["x"], charge_pos["y"]) if isinstance(charge_pos, dict) and "x" in charge_pos else None
             self._start_task("charge", "Go Charge", dest)
             self._api.request("charging")
-        elif command.startswith("GOTO_"):
-            point_name = command[len("GOTO_"):]
-            point = NAMED_POINTS.get(point_name)
+        elif command.startswith(GOTO_PREFIX):
+            point_name, point = resolve_goto(command, self._points)
             if point is None:
-                rospy.logwarn("Unknown named point %r -- ignoring", point_name)
+                rospy.logwarn("Unknown named point in %r -- ignoring", command)
                 return
             x, y, yaw = point
             rospy.loginfo("Sending robot to point %r (x=%.3f y=%.3f yaw=%.3f)", point_name, x, y, yaw)
