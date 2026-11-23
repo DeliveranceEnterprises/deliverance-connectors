@@ -246,8 +246,9 @@ class AutoxingCloudConnector(FleetConnector):
         # stored id ("autoxing-chassis-1-autoxing-chassis-1-...").
         mission_id = state.task_id if state.task_id else None
         # Execution metrics from taskObj ride along in mission_tracking.data;
-        # InOrbit prefixes them with "data_" in kpis/objects, where the
-        # Deliverance mapper rebuilds them into the tasks.report.
+        # InOrbit stores them prefixed with "data_" in kpis/objects. They are
+        # for InOrbit only: the Deliverance mapper reads data_group as the
+        # task type and leaves every other data_* field out of tasks.report.
         data: dict = {"group": "Delivery"}
         if state.task_id:
             data["autoxing_task_id"] = state.task_id
