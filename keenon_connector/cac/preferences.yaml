@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # Preferences - Keenon Connector
-# Account: Deliverance (rnLasGAxn5CP7bj32) | Tag: Keenon (DJbJhivzeMvXDj8z)
+# Scope: tag/<account-id>/<tag-id> of the Keenon robots' tag.
 #
 # navigationWidget.actions whitelist -- without this, the Navigation control
 # widget's LOCK dropdown shows ALL account-level actions with
@@ -21,9 +21,9 @@ metadata:
 spec:
   navigationWidget:
     actions:
-      - keenon-send-to-mesa-1
-      - keenon-send-to-mesa-2
-      - keenon-send-to-mesa-3
+      - keenon-send-to-table-1
+      - keenon-send-to-table-2
+      - keenon-send-to-table-3
       - keenon-return-to-origin
       - keenon-cancel-task
       - keenon-clean-recharge

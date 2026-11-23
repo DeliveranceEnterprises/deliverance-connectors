@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # StatusDefinition objects configure threshold-based fleet status rules.
-# Replace rnLasGAxn5CP7bj32 and hSTlpyR8qtgjSfcT with your InOrbit account and tag IDs.
+# Scope: tag/<account-id>/<tag-id>; set it to your InOrbit account and tag IDs.
 
 apiVersion: v0.1
 kind: StatusDefinition
