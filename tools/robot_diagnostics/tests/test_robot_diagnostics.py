@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from robot_diagnostics.common import classify_validation_status, sanitize_text
 from robot_diagnostics.inorbit import parse_describe_robots
@@ -167,7 +169,7 @@ fleet:
             allybot.AllybotReadOnlyClient = FakeClient  # type: ignore[assignment]
             allybot.sample_ws = failing_ws  # type: ignore[assignment]
             try:
-                rows = await allybot.diagnose(repo_root, "allybot-cleaner-1", False, 1)
+                rows = await allybot.diagnose(repo_root, "allybot-cleaner-1", False, 1, allow_login=True)
             finally:
                 allybot.AllybotReadOnlyClient = original_client  # type: ignore[assignment]
                 allybot.sample_ws = original_ws  # type: ignore[assignment]
@@ -178,6 +180,80 @@ fleet:
         self.assertNotIn("open123", rows[0]["observations"])
         self.assertNotIn("token456", rows[0]["observations"])
         self.assertNotIn("abc", rows[0]["observations"])
+
+
+ALLYBOT_TEST_CONFIG = """
+connector_config:
+  base_url: "http://example.invalid"
+  username: "user"
+  password: "pass"
+fleet:
+  - robot_id: "allybot-cleaner-1"
+    fleet_robot_id: "fleet-robot-1"
+"""
+
+
+class AllybotLoginGuardTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo_root = Path(self.tmp.name)
+        config_dir = self.repo_root / "allybot_connector" / "config"
+        config_dir.mkdir(parents=True)
+        (config_dir / "my_fleet.local.yaml").write_text(ALLYBOT_TEST_CONFIG, encoding="utf-8")
+        # A connector .env must not be able to grant the opt-in.
+        (config_dir / ".env.local").write_text(f"{allybot.ALLOW_LOGIN_ENV}=1\n", encoding="utf-8")
+        self.logins = 0
+        test = self
+
+        class FakeClient:
+            def __init__(self, config: dict[str, object]) -> None:
+                self.openid = "open123"
+                self.mobile_token = "token456"
+                self.rest_token = None
+
+            async def login(self) -> None:
+                test.logins += 1
+
+            async def close(self) -> None:
+                return None
+
+            async def get_device_status(self, fleet_robot_id: str) -> dict[str, object]:
+                return {"battery": 1.0}
+
+            async def get_active_map(self, fleet_robot_id: str) -> dict[str, object]:
+                return {}
+
+        self.env_patch = mock.patch.dict(os.environ, {}, clear=False)
+        self.env_patch.start()
+        os.environ.pop(allybot.ALLOW_LOGIN_ENV, None)
+        self.client_patch = mock.patch.object(allybot, "AllybotReadOnlyClient", FakeClient)
+        self.client_patch.start()
+
+    def tearDown(self) -> None:
+        self.client_patch.stop()
+        self.env_patch.stop()
+        self.tmp.cleanup()
+
+    async def test_login_skipped_without_opt_in(self) -> None:
+        rows = await allybot.diagnose(self.repo_root, None, True, 0)
+
+        self.assertEqual(self.logins, 0)
+        self.assertEqual(rows[0]["allybot_login"], "skipped")
+        self.assertIn("--allow-login", rows[0]["observations"])
+
+    async def test_login_with_flag(self) -> None:
+        rows = await allybot.diagnose(self.repo_root, None, True, 0, allow_login=True)
+
+        self.assertEqual(self.logins, 1)
+        self.assertEqual(rows[0]["allybot_login"], "OK")
+
+    async def test_login_with_env_var(self) -> None:
+        os.environ[allybot.ALLOW_LOGIN_ENV] = "1"
+
+        rows = await allybot.diagnose(self.repo_root, None, True, 0)
+
+        self.assertEqual(self.logins, 1)
+        self.assertEqual(rows[0]["allybot_login"], "OK")
 
 
 if __name__ == "__main__":

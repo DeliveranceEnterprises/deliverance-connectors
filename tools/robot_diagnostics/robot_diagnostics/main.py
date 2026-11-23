@@ -161,6 +161,15 @@ async def async_main() -> int:
     parser.add_argument("--robot-id")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--ws-seconds", type=float, default=0.0)
+    parser.add_argument(
+        "--allow-login",
+        action="store_true",
+        help=(
+            "Allow providers that keep one session per account (Allybot) to log in. "
+            "Logging in ends the account's other sessions: use a dedicated account. "
+            f"Same as {allybot.ALLOW_LOGIN_ENV}=1."
+        ),
+    )
     parser.add_argument("--no-inorbit", action="store_true")
     parser.add_argument("--include-inorbit-related", action="store_true")
     parser.add_argument("--inorbit-workspace", default=str(DEFAULT_INORBIT_WORKSPACE))
@@ -179,6 +188,7 @@ async def async_main() -> int:
                 args.robot_id,
                 args.all,
                 args.ws_seconds,
+                allow_login=args.allow_login,
             )
         )
 

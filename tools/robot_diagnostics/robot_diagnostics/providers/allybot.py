@@ -18,6 +18,22 @@ import yaml
 from ..common import append_observation, exception_summary
 
 
+# Allybot keeps one session per account: logging in here ends the session of
+# every other consumer of the account (the production connector or the
+# Deliverance Platform integration). The live query only runs when the
+# operator opts in with --allow-login or this environment variable.
+ALLOW_LOGIN_ENV = "ALLYBOT_DIAGNOSTICS_ALLOW_LOGIN"
+LOGIN_SKIPPED_MESSAGE = (
+    "Live Allybot query skipped: logging in ends the account's other sessions "
+    "(Allybot keeps one session per account). Use a dedicated account and pass "
+    f"--allow-login or set {ALLOW_LOGIN_ENV}=1 to query it."
+)
+
+
+def login_allowed(allow_login: bool) -> bool:
+    return allow_login or os.getenv(ALLOW_LOGIN_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
 def load_env_file(path: Path) -> None:
     if not path.exists():
         return
@@ -219,7 +235,11 @@ async def diagnose(
     robot_id: str | None,
     all_robots: bool,
     ws_seconds: float,
+    allow_login: bool = False,
 ) -> list[dict[str, Any]]:
+    # Read the opt-in before load_config, so a connector .env file cannot
+    # enable it on the operator's behalf.
+    may_login = login_allowed(allow_login)
     config_path = repo_root / "allybot_connector" / "config" / "my_fleet.local.yaml"
     env_path = repo_root / "allybot_connector" / "config" / ".env.local"
     config = load_config(config_path, env_path)
@@ -245,6 +265,22 @@ async def diagnose(
                     "fleet_robot_id_masked": mask(robot.get("fleet_robot_id")),
                     "validated": "pending_credentials",
                     "observations": f"Missing/placeholder Allybot config: {', '.join(missing)}",
+                }
+            )
+        return rows
+
+    if not may_login:
+        for robot in fleet:
+            rows.append(
+                {
+                    **base_row,
+                    "robot_id": robot.get("robot_id"),
+                    "fleet_robot_id": robot.get("fleet_robot_id"),
+                    "fleet_robot_id_masked": mask(robot.get("fleet_robot_id")),
+                    "allybot_login": "skipped",
+                    "ws": "skipped",
+                    "validated": "yaml_only",
+                    "observations": LOGIN_SKIPPED_MESSAGE,
                 }
             )
         return rows

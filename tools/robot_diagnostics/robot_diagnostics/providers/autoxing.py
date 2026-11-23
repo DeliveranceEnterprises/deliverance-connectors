@@ -21,7 +21,13 @@ def _placeholder(value: Any) -> bool:
     return not text or "your-" in text or "placeholder" in text or "<" in text
 
 
-async def diagnose(repo_root: Path, robot_id: str | None, all_robots: bool, ws_seconds: float) -> list[dict[str, Any]]:
+async def diagnose(
+    repo_root: Path,
+    robot_id: str | None,
+    all_robots: bool,
+    ws_seconds: float,
+    allow_login: bool = False,
+) -> list[dict[str, Any]]:
     config_path = repo_root / "autoxing_connector" / "config" / "my_fleet.local.yaml"
     env_path = repo_root / "autoxing_connector" / "config" / ".env.local"
     with config_path.open(encoding="utf-8") as handle:
