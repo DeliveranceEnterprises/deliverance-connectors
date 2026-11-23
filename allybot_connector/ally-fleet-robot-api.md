@@ -832,7 +832,7 @@ curl -X POST \
   "data": [
     {
       "id": "ae3178a170b0f97b40e783e7f9dad747",
-      "name": "Espaitec",
+      "name": "Default Area",
       "time": "09:30:58-15:43:58",
       "start": "09:30:58",
       "end": "15:43:58",
@@ -1104,13 +1104,13 @@ Confirm the new state by polling `POST /fleetapi/device/usestatus` (look at
 ### Task Lifecycle — Captured Sequence
 
 The following request sequence was captured end-to-end on 2026-04-27 against
-robot `6d70603da0cb3d00ba104a191770170b` (task `Espaitec`,
+robot `6d70603da0cb3d00ba104a191770170b` (task `Default Area`,
 id `ae3178a170b0f97b40e783e7f9dad747`):
 
 | Δt | Method | Endpoint | Effect |
 |----|--------|----------|--------|
 | 0 s | `POST` | `/fleetapi/device/usestatus` | Snapshot — robot was `Charging`, `haveTaskRunning: false` |
-| +0 s | `POST` | `/fleetapi/clean/list` | Discover available tasks (returned `Espaitec`) |
+| +0 s | `POST` | `/fleetapi/clean/list` | Discover available tasks (returned `Default Area`) |
 | +2 s | `GET`  | `/fleetapi/task/plan/reachable` | Pre-flight reachability check |
 | +4 s | `POST` | `/fleetapi/clean/default/start` | **Start** — `data: true` |
 | +13 s | `GET` | `/fleetapi/task/plan/path/running` | Poll planned path |
@@ -1641,13 +1641,13 @@ on the App WebSocket while a task is active.
   "uuid": "1777296013173",
   "robotid": "6d70603da0cb3d00ba104a191770170b",
   "taskId": "ae3178a170b0f97b40e783e7f9dad747",
-  "name": "Espaitec",
+  "name": "Default Area",
   "time": "21:20:05",
   "area": "0.0",
   "hour": 0,
   "percent": 0,
   "taskStatus": 3,
-  "msg": "{\"taskName\":\"Espaitec\",\"robotId\":\"6d70603da0cb3d00ba104a191770170b\",\"taskId\":\"ae3178a170b0f97b40e783e7f9dad747\",\"startTime\":1777296005000,\"percentage\":0,\"workingScope\":0.0,\"currCircle\":1,\"totalCircle\":2,\"workingTime\":0,\"totalTime\":3,\"planId\":\"ac8c95b30ca2942e345f721f184107c2\",\"trace\":null,\"globalPlanRoute\":null,\"taskStatus\":3}"
+  "msg": "{\"taskName\":\"Default Area\",\"robotId\":\"6d70603da0cb3d00ba104a191770170b\",\"taskId\":\"ae3178a170b0f97b40e783e7f9dad747\",\"startTime\":1777296005000,\"percentage\":0,\"workingScope\":0.0,\"currCircle\":1,\"totalCircle\":2,\"workingTime\":0,\"totalTime\":3,\"planId\":\"ac8c95b30ca2942e345f721f184107c2\",\"trace\":null,\"globalPlanRoute\":null,\"taskStatus\":3}"
 }
 ```
 
@@ -1730,7 +1730,7 @@ is running, the `data.clean` object carries a parallel summary of progress:
     "navStatus": 2,
     "location": true,
     "clean": {
-      "title": "Espaitec",
+      "title": "Default Area",
       "task_mode": "Scrubbing.Standard",
       "start": "21:20:05",
       "end": "",
