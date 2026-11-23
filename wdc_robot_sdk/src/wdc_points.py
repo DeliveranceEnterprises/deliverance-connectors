@@ -48,10 +48,13 @@ def parse_points(document) -> Dict[str, Point]:
     Returns {NAME: (x, y, yaw)}. `yaw` (radians) defaults to 0."""
     if document is None:
         return {}
-    if not isinstance(document, dict) or not isinstance(document.get("points", {}), dict):
+    if not isinstance(document, dict):
         raise PointsFileError("expected a mapping with a 'points' mapping")
+    entries = document.get("points") or {}
+    if not isinstance(entries, dict):
+        raise PointsFileError("'points' must be a mapping")
     points: Dict[str, Point] = {}
-    for raw_name, spec in (document.get("points") or {}).items():
+    for raw_name, spec in entries.items():
         name = normalize_point_name(raw_name)
         if name is None:
             raise PointsFileError(f"invalid point name {raw_name!r}")

@@ -89,6 +89,21 @@ Only list points that are inside the robot's current map.
 - An InOrbit Agent Core for ROS1 on the same ROS master. Installing it is not
   covered here.
 
+## Tests
+
+The WebSocket client (`src/wdc_local_api.py`) and the points file handling
+(`src/wdc_points.py`) do not depend on ROS and have unit tests:
+
+```bash
+cd wdc_robot_sdk
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest tests
+```
+
+The node itself needs ROS; check it at least with
+`python3 -m py_compile src/*.py`.
+
 ## InOrbit configuration
 
 The `cac/` directory has the config-as-code for the robot:

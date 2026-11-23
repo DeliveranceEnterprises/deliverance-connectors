@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+SPDX-PackageName = "wdc-robot-sdk"
+SPDX-PackageSupplier = "Deliverance Enterprises"
