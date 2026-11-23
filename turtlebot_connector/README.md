@@ -198,6 +198,28 @@ The CAC files are coherent with the existing repo style, but they still need to
 be validated against the target InOrbit account because scopes, edition support,
 and available widgets are account-specific.
 
+### Keep demo robots out of production
+
+Do not give the demo robots the InOrbit location tag that
+`deliverance-integrations-inorbit` uses to import robots into the
+Deliverance Platform. Robots with that tag are imported into the customer
+organisation mapped to it, so a demo TurtleBot would show up as a customer
+robot. Use a separate demo tag (the `<TURTLEBOT_TAG_ID>` of the CAC files).
+
+### Which dashboard is canonical
+
+The account-wide robot dashboard is not in this connector: it is moving to the
+repo-root `account_cac/` folder (PR #12), which already has the TurtleBot
+sections, and that is the canonical one. The dashboards here are standalone
+demo dashboards:
+
+- `cac/dashboard.yaml` (`turtlebot-navigation`): TurtleBot navigation demo,
+  shown for robots with the TurtleBot tag.
+- `cac/dashboard_robot.yaml` (`turtlebot-robot-cleaning`): cleaning demo,
+  shown for robots with the TurtleBot Cleaning tag.
+
+Do not copy their sections into the account-wide dashboard.
+
 For the validated TurtleBot demo setup, the `RobotCamera` CAC uses a
 robot-scoped entry with `metadata.id: "0"`. Camera streaming is validated and
 working in the InOrbit Navigation widget.
