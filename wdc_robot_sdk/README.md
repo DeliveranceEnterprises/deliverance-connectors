@@ -130,6 +130,20 @@ done
 If you add points to the points file, add the matching `GOTO_<NAME>` actions
 to `actions.yaml` before applying it.
 
+## Running alongside deliverance-integrations-wdc
+
+The `deliverance-integrations-wdc` connector reads the same robots through
+the vendor cloud and is read-only. This bridge is the only command path to
+the robot. When both run:
+
+- Run only one local client per robot. The tablet's WebSocket server mixes
+  replies between concurrent clients, so do not point a second bridge, a
+  test script or another tool at the same tablet while this node runs.
+- The robot appears twice in the platform if it is also imported through
+  `deliverance-integrations-inorbit` (once from the vendor cloud, once from
+  InOrbit). Either keep this robot out of the InOrbit location tag that
+  integration imports, or accept the duplicate.
+
 ## Notes and limitations
 
 - The coordinates in the points file are copied by hand from the robot's
