@@ -22,10 +22,13 @@ class KeenonRobotConfig(RobotConfig):
         robot_id: InOrbit robot ID.
         fleet_robot_id: Keenon robot MAC address (e.g. ``AA:BB:CC:DD:EE:FF``).
         store_id: Keenon store ID the robot belongs to (e.g. ``S00000001``).
+        name: Display name shown in InOrbit Fleet Status. Optional; if set,
+            overrides the default robot_id that the framework publishes.
     """
 
     fleet_robot_id: str  # MAC address format
     store_id: str
+    name: str | None = None
 
 
 class KeenonConfig(BaseSettings):
@@ -49,6 +52,11 @@ class KeenonConfig(BaseSettings):
     client_secret: str
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Keenon keeps one token per app, so logins are rationed: after repeated
+    # auth failures the next login waits login_backoff_min_s, doubling up to
+    # login_backoff_max_s.
+    login_backoff_min_s: float = 60.0
+    login_backoff_max_s: float = 900.0
     webhook_host: str = "0.0.0.0"
     webhook_port: int | None = None  # None disables the webhook receiver
 

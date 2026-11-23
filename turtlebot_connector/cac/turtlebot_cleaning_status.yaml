@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Cleaning-robot demo statuses for the TurtleBot.
+# IDs match the data source IDs so InOrbit links each rule to its source.
+# Thresholds are in post-scale units (data sources use scale: 1, so 0-100).
+
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: turtlebot-clean-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  rules:
+    - function: BELOW
+      params:
+        - 0.15
+      status: ERROR
+    - function: BELOW
+      params:
+        - 0.30
+      status: WARNING
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: turtlebot-dirty-water-tank
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  rules:
+    - function: ABOVE
+      params:
+        - 0.90
+      status: ERROR
+    - function: ABOVE
+      params:
+        - 0.75
+      status: WARNING
+---
+apiVersion: v0.1
+kind: StatusDefinition
+metadata:
+  id: turtlebot-clean-emergency-stop
+  scope: "tag/<ACCOUNT_ID>/<TURTLEBOT_CLEANING_TAG_ID>"
+spec:
+  rules:
+    - function: EQUALS
+      params:
+        - true
+      status: ERROR

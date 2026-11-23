@@ -6,6 +6,7 @@
 
 import math
 import struct
+import time
 from dataclasses import dataclass, field
 
 # Standard Keenon map resolution (metres per pixel), confirmed empirically.
@@ -100,8 +101,13 @@ WATER_TANK_STATE_MAP: dict[int, str] = {
     3: "full",
 }
 
-# Task statuses that indicate the task is no longer active
-TERMINAL_TASK_STATUSES = {0, 4, 5}
+# A clean status older than this is not trusted for the emergency stop.
+CLEAN_STATUS_MAX_AGE_S = 60.0
+
+# Task statuses that indicate the task is no longer active: failed, completed,
+# cancelled. 6 (target_reached) is NOT terminal: the robot is still on the task.
+# Single source of truth for the poller, the webhook and the connector.
+TERMINAL_TASK_STATUSES: frozenset[int] = frozenset({0, 4, 5})
 
 
 def detect_robot_type(robot_model: str | None) -> str:
@@ -165,12 +171,19 @@ class RobotState:
     task_no: str | None = None
     task_status: int | None = None  # see TASK_STATUS_MAP
     task_start_ts: int | None = None  # ms timestamp when task was dispatched
+    task_end_ts: int | None = None    # ms timestamp, fixed when the task is first seen finished
+    task_name: str | None = None    # human-readable label (e.g. "Send to Table 1")
+    task_group: str | None = None   # action group (e.g. "Delivery", "Cleaning", "Hotel")
+    task_report: dict | None = None  # fetched from Keenon API after task completes
+    task_report_attempts: int = 0    # bounded retries for the report fetch
+    task_report_last_attempt: float = 0.0  # monotonic ts of last report fetch try
 
     # Cleaning-specific (populated only when robot_type == "clean")
     clean_main_state: int | None = None
     clean_sub_state: int | None = None
     clean_faulting: bool | None = None
     clean_scram: bool | None = None
+    clean_status_ts: float = 0.0  # monotonic ts of the last clean-status update
     clean_navigating: bool | None = None
     clean_bilge_tank: int | None = None
     clean_water_tank: int | None = None
@@ -178,3 +191,39 @@ class RobotState:
     # Connectivity
     api_connected: bool = False
     last_update: float = field(default=0.0)
+
+    def start_task(
+        self,
+        task_no: str | None,
+        status: int | None = None,
+        name: str | None = None,
+        group: str | None = None,
+    ) -> None:
+        """Track a new task, resetting every per-task field of the previous one."""
+        self.task_no = task_no
+        self.task_status = status
+        self.task_start_ts = int(time.time() * 1000)
+        self.task_end_ts = None
+        self.task_name = name
+        self.task_group = group
+        self.task_report = None
+        self.task_report_attempts = 0
+        self.task_report_last_attempt = 0.0
+
+
+def clean_scram_active(state: RobotState, now: float | None = None) -> bool:
+    """True when a fresh clean status reports the emergency stop pressed."""
+    if state.clean_scram is not True:
+        return False
+    now = time.monotonic() if now is None else now
+    return now - state.clean_status_ts <= CLEAN_STATUS_MAX_AGE_S
+
+
+def parse_task_state(value) -> int | None:
+    """Coerce a task state given as int or numeric string (webhooks) to int."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

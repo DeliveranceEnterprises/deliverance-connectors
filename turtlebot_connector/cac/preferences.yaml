@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Preferences for the TurtleBot demo connector.
+# `navigationWidget.actions` whitelists which ActionDefinitions appear in the
+# native Navigation tab control widget (the LOCK / action dropdown header).
+# Without it, every account-level action with widgets:[navigation] shows up
+# as a broken icon. Listing only TurtleBot's own actions keeps it clean,
+# matching the pattern used by the Keenon connector in this account.
+
+apiVersion: v0.1
+kind: Preferences
+metadata:
+  id: all
+  scope: tag/<ACCOUNT_ID>/<TURTLEBOT_TAG_ID>
+spec:
+  navigationWidget:
+    actions:
+      - turtlebot-go-home
+      - turtlebot-go-station-1
+      - turtlebot-go-station-2
+      - turtlebot-cancel-task

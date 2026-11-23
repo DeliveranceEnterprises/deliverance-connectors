@@ -52,3 +52,5 @@ Thumbs.db
 *.db
 *.sqlite
 
+# Runtime state written by the connector (see connector_config.data_dir)
+data/

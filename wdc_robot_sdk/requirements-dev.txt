@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# Unit tests of the ROS-free modules (src/wdc_local_api.py, src/wdc_points.py).
+pytest>=8
+PyYAML>=6

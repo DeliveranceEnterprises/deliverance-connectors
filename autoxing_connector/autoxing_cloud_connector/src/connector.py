@@ -49,6 +49,7 @@ class AutoxingCloudConnector(FleetConnector):
             r.robot_id: RobotState() for r in config.fleet
         }
         self._area_names: dict[str, str] = {}  # areaId → name cache
+        self._instrumented_sessions: set[str] = set()  # robots whose display name is set
 
         self._api_client: AutoxingAPIClient | None = None
         self._data_poller: DataPoller | None = None
@@ -73,6 +74,7 @@ class AutoxingCloudConnector(FleetConnector):
             api_appcode=cfg.api_appcode,
             verify_ssl=cfg.verify_ssl,
             timeout=cfg.request_timeout,
+            relogin_min_interval=cfg.relogin_min_interval,
         )
         await self._api_client.login()
 
@@ -85,7 +87,11 @@ class AutoxingCloudConnector(FleetConnector):
             robot_id_to_fleet_id=self._robot_id_to_fleet_id,
             fleet_id_to_robot_id=self._fleet_id_to_robot_id,
             update_freq=self.config.update_freq,
+            data_dir=cfg.data_dir,
         )
+        # Pre-populate state before the InOrbit session connects so the SDK
+        # never publishes a (0, 0) pose artefact on startup.
+        await self._data_poller.poll_once()
         self._data_poller.start()
         self._logger.info("Connected to AutoXing Cloud at %s", cfg.base_url)
 
@@ -106,12 +112,32 @@ class AutoxingCloudConnector(FleetConnector):
     # Execution loop
     # ------------------------------------------------------------------
 
+    def _instrument_robot_session_if_needed(self, robot_id: str) -> None:
+        if robot_id in self._instrumented_sessions:
+            return
+        session = self._get_robot_session(robot_id)
+        robot_cfg = self._robot_configs.get(robot_id)
+        if robot_cfg and robot_cfg.name and session.robot_name != robot_cfg.name:
+            session.robot_name = robot_cfg.name
+            # No public API renames a robot after its session exists: the
+            # framework creates sessions with robot_name=robot_id, and
+            # inorbit_edge only sends the name with the robot status. This
+            # private call re-sends it; check it on inorbit_edge upgrades.
+            session._send_robot_status(online=True)
+            self._logger.info(
+                "Set display name '%s' for robot '%s'", robot_cfg.name, robot_id
+            )
+        self._instrumented_sessions.add(robot_id)
+
     @override
     async def _execution_loop(self) -> None:
         for robot_id in self.robot_ids:
+            self._instrument_robot_session_if_needed(robot_id)
             self._publish_robot_data(robot_id, self._robot_states[robot_id])
 
     def _publish_robot_data(self, robot_id: str, state: RobotState) -> None:
+        if not state.has_data:
+            return
         if state.x is not None and state.y is not None and state.yaw is not None:
             self.publish_robot_pose(
                 robot_id,
@@ -162,10 +188,24 @@ class AutoxingCloudConnector(FleetConnector):
 
         kv["mission_status"] = self._compute_mission_status(state)
 
-        if state.task_id:
-            kv["mission_tracking"] = self._build_mission_report(state)
+        # A terminal task is published even if its detail never arrived (a
+        # short task can finish before the detail fetch succeeds): its mission
+        # must not be dropped for lack of a label.
+        terminal = bool(state.task_id and (state.task_is_finish or state.task_is_cancel))
+        if state.task_id and (state._task_ready or terminal):
+            kv["mission_tracking"] = self._build_mission_report(robot_id, state)
 
         self.publish_robot_key_values(robot_id, **kv)
+
+        # Publish the terminal mission_tracking exactly once, then stop
+        # republishing it. InOrbit only finalises a mission into kpis/objects
+        # once it stops receiving updates; a mission re-sent every cycle never
+        # "settles", so the LAST task of a burst would otherwise stay unindexed
+        # until the next task starts. Clearing here lets it settle immediately.
+        # The poller remembers the closed task so a lingering taskObj does not
+        # reopen it.
+        if terminal and "mission_tracking" in kv:
+            state.close_task()
 
     _MISSION_STATE: dict[str, str] = {
         "executing": "Executing",
@@ -177,7 +217,9 @@ class AutoxingCloudConnector(FleetConnector):
         if not state.api_connected:
             return "Error"
         if state.is_emergency_stop:
-            return "Error"
+            # Its own mode, not "Error": the platform treats an emergency stop as a stop and not as a breakdown
+            # (KPIs), and "Error" here would reach it as a breakdown.
+            return "Emergency"
         if state.is_manual_mode:
             return "Manual"
         if state.task_id and not state.task_is_finish and not state.task_is_cancel:
@@ -186,7 +228,7 @@ class AutoxingCloudConnector(FleetConnector):
             return "Charging"
         return "Idle"
 
-    def _build_mission_report(self, state: RobotState) -> dict:
+    def _build_mission_report(self, robot_id: str, state: RobotState) -> dict:
         finished = bool(state.task_is_finish)
         canceled = bool(state.task_is_cancel)
         in_progress = not finished and not canceled
@@ -197,13 +239,54 @@ class AutoxingCloudConnector(FleetConnector):
         else:
             mission_state = "Executing"
 
+        start_ts = state.task_start_ts or int(time.time() * 1000)
+        # Autoxing task IDs are UUIDs: globally unique per task, never reused.
+        # InOrbit's kpis/objects prefixes the entityId (robotId) to the missionId
+        # automatically, so publishing just the UUID avoids a double-prefix in the
+        # stored id ("autoxing-chassis-1-autoxing-chassis-1-...").
+        mission_id = state.task_id if state.task_id else None
+        # Execution metrics from taskObj ride along in mission_tracking.data;
+        # InOrbit stores them prefixed with "data_" in kpis/objects. They are
+        # for InOrbit only: the Deliverance mapper reads data_group as the
+        # task type and leaves every other data_* field out of tasks.report.
+        data: dict = {"group": "Delivery"}
+        if state.task_id:
+            data["autoxing_task_id"] = state.task_id
+        if state.task_target_name:
+            data["target_name"] = state.task_target_name
+        if state.task_back_name:
+            data["back_name"] = state.task_back_name
+        if state.task_mileage is not None:
+            data["mileage"] = state.task_mileage
+        if state.task_total_dis is not None:
+            data["total_distance"] = state.task_total_dis
+        if state.task_duration is not None:
+            data["duration_s"] = state.task_duration
+        if state.task_target_x is not None:
+            data["target_x"] = state.task_target_x
+        if state.task_target_y is not None:
+            data["target_y"] = state.task_target_y
+        if state.task_back_x is not None:
+            data["back_x"] = state.task_back_x
+        if state.task_back_y is not None:
+            data["back_y"] = state.task_back_y
+        if state.task_origin_x is not None:
+            data["origin_x"] = state.task_origin_x
+        if state.task_origin_y is not None:
+            data["origin_y"] = state.task_origin_y
+        if state.task_area_id:
+            data["area_id"] = state.task_area_id
+        if state.task_building_id:
+            data["building_id"] = state.task_building_id
+        if state.task_type is not None:
+            data["task_type"] = state.task_type
         report: dict = {
-            "missionId": state.task_id,
+            "missionId": mission_id,
             "inProgress": in_progress,
             "state": mission_state,
-            "label": state.task_name or state.task_id,
-            "startTs": state.task_start_ts or int(time.time() * 1000),
-            "data": {},
+            "label": state.task_target_name or state.task_name or state.task_id,
+            "startTs": start_ts,
+            "data": data,
             "status": "OK",
             "tasks": [{"taskId": "0", "label": state.task_name or "Task"}],
             "completedPercent": 1.0 if finished else 0.0,
@@ -305,11 +388,7 @@ class AutoxingCloudConnector(FleetConnector):
                         stderr="AutoXing API did not return a task ID",
                     )
                 await self._api_client.execute_task(task_id)
-                state.task_id = task_id
-                state.task_name = task_payload["name"]
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(task_id, int(time.time() * 1000), task_payload["name"])
 
             case CustomScripts.GO_HOME:
                 task_payload = {
@@ -326,11 +405,7 @@ class AutoxingCloudConnector(FleetConnector):
                         stderr="AutoXing API did not return a task ID for go_home",
                     )
                 await self._api_client.execute_task(task_id)
-                state.task_id = task_id
-                state.task_name = "Return to charger"
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(task_id, int(time.time() * 1000), "Return to charger")
 
             case CustomScripts.CANCEL_TASK:
                 cmd = CancelTaskCommand.model_validate(script_args)
@@ -346,10 +421,7 @@ class AutoxingCloudConnector(FleetConnector):
             case CustomScripts.EXECUTE_TASK:
                 cmd = ExecuteTaskCommand.model_validate(script_args)
                 await self._api_client.execute_task(cmd.task_id)
-                state.task_id = cmd.task_id
-                state.task_is_finish = False
-                state.task_is_cancel = False
-                state.task_start_ts = int(time.time() * 1000)
+                state.begin_task(cmd.task_id, int(time.time() * 1000))
 
             case _:
                 raise CommandFailure(

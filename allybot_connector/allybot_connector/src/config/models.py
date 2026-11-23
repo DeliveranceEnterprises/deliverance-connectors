@@ -4,7 +4,7 @@
 
 """Configuration models for the Allybot connector."""
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from inorbit_connector.models import ConnectorConfig, RobotConfig
@@ -20,9 +20,18 @@ class AllybotRobotConfig(RobotConfig):
         robot_id: InOrbit robot ID.
         fleet_robot_id: Allybot robot UUID — matches ``robotId`` in REST responses
             and ``serial`` in App WS ``device_position`` messages.
+        name: Display name shown in InOrbit Fleet Status. Optional; if set,
+            overrides the default robot_id that the framework publishes.
+
+    The Deliverance InOrbit integration detects the vendor from ``robot_id`` plus
+    the InOrbit name, so the word ``allybot`` must appear in at least one of them.
+    A ``robot_id`` such as ``allybot-cleaner-1`` is enough on its own; otherwise
+    keep ``allybot`` in ``name``.
     """
 
     fleet_robot_id: str  # UUID string
+    name: str | None = None
+    robot_model: str = "C2"
 
 
 class AllybotConfig(BaseSettings):
@@ -41,11 +50,15 @@ class AllybotConfig(BaseSettings):
         extra="allow",
     )
 
-    base_url: str  # e.g. "http://116.205.178.152:28080"
+    base_url: str  # e.g. "http://<ALLYBOT_SERVER_HOST>:28080"
     username: str
     password: str  # stored in plain text; base64 encoding applied internally for App WS
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Minimum seconds between two logins (WebSocket reconnects and commands share it).
+    # Every login invalidates the other sessions of the account; see the README section
+    # "Running alongside deliverance-integrations-allybot".
+    min_relogin_seconds: float = Field(default=60.0, ge=0.0)
 
 
 class AllybotConnectorConfig(ConnectorConfig):

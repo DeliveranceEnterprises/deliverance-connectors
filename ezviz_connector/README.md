@@ -58,9 +58,36 @@ to fill in `config/my_fleet.yaml` and to confirm credentials work.
 | `last_motion_ts` | `device.last_alarm_time` | Epoch ms. |
 | `motion_triggered` | `device.Motion_Trigger` | True while an alarm is firing. |
 | `connector_version` | local | |
+| `robot_model` | config | `robot_model` per camera, "Ezviz Camera" by default. "Ezviz " is prepended when the value does not start with "Ezviz" (case-insensitive), so `H6C` is published as `Ezviz H6C`; the platform uses that prefix to recognise the robot as a camera. |
 
 PTZ + snapshot + alarm forwarding are tracked in `.prd/PRD.md` and will land
 in v0.2.
+
+## InOrbit data sources
+
+`cac/data_sources.yaml` defines the data sources for `robot_model`,
+`online_status` and `api_connected`. Its scopes are placeholders
+(`tag/<ACCOUNT_ID>/<EZVIZ_TAG_ID>`): replace them with your InOrbit account ID
+and the ID of the tag that groups your cameras before applying. `inorbit apply`
+does not read from stdin, so write the substituted file to a temporary path:
+
+```bash
+sed -e "s/<ACCOUNT_ID>/<your-account-id>/g" \
+    -e "s/<EZVIZ_TAG_ID>/<your-ezviz-tag-id>/g" \
+    cac/data_sources.yaml > "${TMPDIR:-/tmp}/ezviz_data_sources.yaml"
+inorbit apply -f "${TMPDIR:-/tmp}/ezviz_data_sources.yaml"
+```
+
+Do not commit the substituted file.
+
+## Running alongside deliverance-integrations-ezviz
+
+The Deliverance Platform integration (`deliverance-integrations-ezviz`) can
+read the same Ezviz account. Logging in from this connector may end the
+account's other sessions (not verified), so prefer separate credentials when
+both run at the same time. Run each camera through only one path: a camera
+imported both by this connector and through the platform integration appears
+twice in the platform.
 
 ## Troubleshooting
 

@@ -102,6 +102,7 @@ class EzvizConnector(FleetConnector):
             "connector_version": connector_version,
             "api_connected": state.api_connected,
             "online_status": state.online,
+            "robot_model": cfg.robot_model,
         }
         if state.battery_percent is not None:
             kv["battery"] = state.battery_percent / 100.0

@@ -21,11 +21,13 @@ class AutoxingRobotConfig(RobotConfig):
 
     Attributes:
         fleet_robot_id: AutoXing robot ID string.
+        name: Optional display name shown in InOrbit.
         area_map_config: Optional per-area map metadata overrides keyed by areaId.
             Each value may have: origin_x (float), origin_y (float), resolution (float m/px).
     """
 
     fleet_robot_id: str
+    name: str | None = None
     area_map_config: dict[str, dict] = {}
 
 
@@ -50,6 +52,13 @@ class AutoxingConnectorConfig(BaseSettings):
     api_appcode: str = _API_APPCODE
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Minimum seconds between two logins. After a 401 (token expired or
+    # revoked) the connector logs in again, but never more often than this.
+    relogin_min_interval: float = 60.0
+    # Directory for the connector's runtime state (the task start-time cache).
+    # Relative paths resolve against the working directory: /app/data in the
+    # Docker image, where docker-compose.example.yaml mounts a volume.
+    data_dir: str = "data"
 
 
 class AutoxingFleetConnectorConfig(ConnectorConfig):

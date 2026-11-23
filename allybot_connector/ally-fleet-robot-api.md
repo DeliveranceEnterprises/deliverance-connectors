@@ -813,13 +813,13 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "id=6d70603da0cb3d00ba104a191770170b&page=1&pageSize=20&type=0&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
-  "http://116.205.178.152:28080/fleetapi/clean/list"
+  -d "id=6d70603da0cb3d00ba104a191770170b&page=1&pageSize=20&type=0&openid=<ALLYBOT_OPENID>&token=<token>" \
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/clean/list"
 ```
 
 **Response:**
@@ -832,7 +832,7 @@ curl -X POST \
   "data": [
     {
       "id": "ae3178a170b0f97b40e783e7f9dad747",
-      "name": "Espaitec",
+      "name": "Default Area",
       "time": "09:30:58-15:43:58",
       "start": "09:30:58",
       "end": "15:43:58",
@@ -891,12 +891,12 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X GET \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  "http://116.205.178.152:28080/fleetapi/task/plan/reachable?planId=&robotId=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/task/plan/reachable?planId=&robotId=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747"
 ```
 
 **Response (map mismatch warning):**
@@ -941,13 +941,13 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "id=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747&reachChargePoint=false&openid=72426fd7de4cb929dc2645378fc4e7dd&token=672f4106d95d4b88946f2c8c21f167f9" \
-  "http://116.205.178.152:28080/fleetapi/clean/default/start"
+  -d "id=6d70603da0cb3d00ba104a191770170b&taskId=ae3178a170b0f97b40e783e7f9dad747&reachChargePoint=false&openid=<ALLYBOT_OPENID>&token=<token>" \
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/clean/default/start"
 ```
 
 **Response (success):**
@@ -988,12 +988,12 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X GET \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  "http://116.205.178.152:28080/fleetapi/task/plan/path/running?robotId=6d70603da0cb3d00ba104a191770170b"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/task/plan/path/running?robotId=6d70603da0cb3d00ba104a191770170b"
 ```
 
 **Response:**
@@ -1047,13 +1047,13 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=1"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/device/taskaction?openid=<ALLYBOT_OPENID>&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=1"
 ```
 
 **Example — Resume (`type=0`):**
@@ -1061,13 +1061,13 @@ curl -X POST \
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=0"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/device/taskaction?openid=<ALLYBOT_OPENID>&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=0"
 ```
 
 **Example — Cancel / Stop (`type=2`):**
@@ -1075,13 +1075,13 @@ curl -X POST \
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Content-Length: 0" \
-  "http://116.205.178.152:28080/fleetapi/device/taskaction?openid=72426fd7de4cb929dc2645378fc4e7dd&id=6d70603da0cb3d00ba104a191770170b&token=672f4106d95d4b88946f2c8c21f167f9&type=2"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/device/taskaction?openid=<ALLYBOT_OPENID>&id=6d70603da0cb3d00ba104a191770170b&token=<token>&type=2"
 ```
 
 **Response (all three actions):**
@@ -1104,13 +1104,13 @@ Confirm the new state by polling `POST /fleetapi/device/usestatus` (look at
 ### Task Lifecycle — Captured Sequence
 
 The following request sequence was captured end-to-end on 2026-04-27 against
-robot `6d70603da0cb3d00ba104a191770170b` (task `Espaitec`,
+robot `6d70603da0cb3d00ba104a191770170b` (task `Default Area`,
 id `ae3178a170b0f97b40e783e7f9dad747`):
 
 | Δt | Method | Endpoint | Effect |
 |----|--------|----------|--------|
 | 0 s | `POST` | `/fleetapi/device/usestatus` | Snapshot — robot was `Charging`, `haveTaskRunning: false` |
-| +0 s | `POST` | `/fleetapi/clean/list` | Discover available tasks (returned `Espaitec`) |
+| +0 s | `POST` | `/fleetapi/clean/list` | Discover available tasks (returned `Default Area`) |
 | +2 s | `GET`  | `/fleetapi/task/plan/reachable` | Pre-flight reachability check |
 | +4 s | `POST` | `/fleetapi/clean/default/start` | **Start** — `data: true` |
 | +13 s | `GET` | `/fleetapi/task/plan/path/running` | Poll planned path |
@@ -1386,11 +1386,11 @@ Three WebSocket sources exist, in priority order:
 **Login (base64 password):**
 
 ```bash
-curl -X POST http://116.205.178.152:28080/fleetapi/account/login \
+curl -X POST http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/account/login \
   -H "X-Api-Version: 184" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=DeliveranceENT&password=QWRtaW4xMjM="
-# QWRtaW4xMjM= = base64("Admin123")
+  -d "username=<ALLYBOT_USERNAME>&password=<base64-encoded-password>"
+# <base64-encoded-password> = base64("<your-password>")
 ```
 
 Response includes `data.token` and `data.openid`.
@@ -1641,13 +1641,13 @@ on the App WebSocket while a task is active.
   "uuid": "1777296013173",
   "robotid": "6d70603da0cb3d00ba104a191770170b",
   "taskId": "ae3178a170b0f97b40e783e7f9dad747",
-  "name": "Espaitec",
+  "name": "Default Area",
   "time": "21:20:05",
   "area": "0.0",
   "hour": 0,
   "percent": 0,
   "taskStatus": 3,
-  "msg": "{\"taskName\":\"Espaitec\",\"robotId\":\"6d70603da0cb3d00ba104a191770170b\",\"taskId\":\"ae3178a170b0f97b40e783e7f9dad747\",\"startTime\":1777296005000,\"percentage\":0,\"workingScope\":0.0,\"currCircle\":1,\"totalCircle\":2,\"workingTime\":0,\"totalTime\":3,\"planId\":\"ac8c95b30ca2942e345f721f184107c2\",\"trace\":null,\"globalPlanRoute\":null,\"taskStatus\":3}"
+  "msg": "{\"taskName\":\"Default Area\",\"robotId\":\"6d70603da0cb3d00ba104a191770170b\",\"taskId\":\"ae3178a170b0f97b40e783e7f9dad747\",\"startTime\":1777296005000,\"percentage\":0,\"workingScope\":0.0,\"currCircle\":1,\"totalCircle\":2,\"workingTime\":0,\"totalTime\":3,\"planId\":\"ac8c95b30ca2942e345f721f184107c2\",\"trace\":null,\"globalPlanRoute\":null,\"taskStatus\":3}"
 }
 ```
 
@@ -1730,7 +1730,7 @@ is running, the `data.clean` object carries a parallel summary of progress:
     "navStatus": 2,
     "location": true,
     "clean": {
-      "title": "Espaitec",
+      "title": "Default Area",
       "task_mode": "Scrubbing.Standard",
       "start": "21:20:05",
       "end": "",
@@ -1808,13 +1808,13 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X POST \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Language: en_US" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "openid=72426fd7de4cb929dc2645378fc4e7dd&token=<token>&id=<robot_id>" \
-  "http://116.205.178.152:28080/fleetapi/device/usemap"
+  -d "openid=<ALLYBOT_OPENID>&token=<token>&id=<robot_id>" \
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/device/usemap"
 ```
 
 **Response:**
@@ -1828,7 +1828,7 @@ curl -X POST \
     "mapinfo": {
       "id": "9e1121fff00d8462f10a876aaf125a3b",
       "name": "DELIVERANCE",
-      "avatar": "http://116.205.178.152:28080/resource/map/20250704185952/map.png",
+      "avatar": "http://<ALLYBOT_SERVER_HOST>:28080/resource/map/20250704185952/map.png",
       "floor": "1",
       "is_use": true,
       "is_add": true,
@@ -1840,8 +1840,8 @@ curl -X POST \
       },
       "resolution": 0.05
     },
-    "organ_name": "DeliveranceENT",
-    "image_url": "http://116.205.178.152:28080/resource/map/20250704185952/map.png",
+    "organ_name": "<ALLYBOT_USERNAME>",
+    "image_url": "http://<ALLYBOT_SERVER_HOST>:28080/resource/map/20250704185952/map.png",
     "robot_name": "202352CNW002D0156",
     "usestatus": "1"
   }
@@ -1888,11 +1888,11 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X GET \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  "http://116.205.178.152:28080/fleetapi/map/mapPoint?mapId=<mapId>&robotId=<robotId>"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/map/mapPoint?mapId=<mapId>&robotId=<robotId>"
 ```
 
 **Response:**
@@ -1951,11 +1951,11 @@ Content-Type: application/x-www-form-urlencoded
 ```bash
 curl -X GET \
   -H "Token: <token>" \
-  -H "Mobile-User-Id: 72426fd7de4cb929dc2645378fc4e7dd" \
+  -H "Mobile-User-Id: <ALLYBOT_OPENID>" \
   -H "X-Api-Version: 184" \
   -H "Robot-Id: <null>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  "http://116.205.178.152:28080/fleetapi/map/shape?mapId=<mapId>"
+  "http://<ALLYBOT_SERVER_HOST>:28080/fleetapi/map/shape?mapId=<mapId>"
 ```
 
 **Response:**
@@ -1982,7 +1982,7 @@ curl -X GET \
         "name": "DELIVERANCE",
         "original": { "x": -6.55, "y": -3.24, "z": 0 },
         "resolution": 0.05,
-        "avatar": "http://116.205.178.152:28080/resource/map/20250704185952/map.png"
+        "avatar": "http://<ALLYBOT_SERVER_HOST>:28080/resource/map/20250704185952/map.png"
       }
     }
   ]

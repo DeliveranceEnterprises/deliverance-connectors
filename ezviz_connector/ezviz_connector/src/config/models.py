@@ -7,6 +7,10 @@ from inorbit_connector.models import ConnectorConfig, RobotConfig
 
 CONNECTOR_TYPE = "ezviz"
 
+# Prefix the platform expects at the start of robot_model to treat the robot
+# as a camera.
+MODEL_PREFIX = "Ezviz"
+
 DEFAULT_ENV_FILE = "config/.env"
 
 
@@ -16,6 +20,11 @@ class EzvizRobotConfig(RobotConfig):
     Attributes:
         robot_id: InOrbit robot ID.
         fleet_robot_id: Ezviz device serial (e.g. ``L45505505``).
+        robot_model: Camera model published as the ``robot_model`` key value.
+            "Ezviz Camera" by default. A value that does not start with
+            "Ezviz" (case-insensitive) is prefixed with "Ezviz ", so "H6C"
+            is published as "Ezviz H6C". The platform relies on the
+            "Ezviz" prefix to recognise the robot as a camera.
         channel: Camera channel for multi-lens devices.
         default_map: frame_id of the InOrbit map this camera lives on.
             The connector publishes a static pose with this frame_id so the
@@ -28,11 +37,20 @@ class EzvizRobotConfig(RobotConfig):
     """
 
     fleet_robot_id: str
+    robot_model: str = "Ezviz Camera"
     channel: int = 1
     default_map: str | None = None
     pose_x: float = 0.0
     pose_y: float = 0.0
     pose_theta: float = 0.0
+
+    @field_validator("robot_model")
+    @classmethod
+    def ensure_ezviz_prefix(cls, v: str) -> str:
+        v = v.strip()
+        if not v.lower().startswith(MODEL_PREFIX.lower()):
+            v = f"{MODEL_PREFIX} {v}" if v else f"{MODEL_PREFIX} Camera"
+        return v
 
 
 class EzvizConfig(BaseSettings):

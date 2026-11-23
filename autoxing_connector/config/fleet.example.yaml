@@ -17,6 +17,8 @@ connector_config:
   login_name: user@example.com
   business_id: <business_id_from_ticket_exchange>
   # password loaded from config/.env (INORBIT_AUTOXING_PASSWORD)
+  # Directory for runtime state (task start-time cache); default "data"
+  # data_dir: data
 
 fleet:
   - robot_id: autoxing-robot-1
