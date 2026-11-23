@@ -104,6 +104,8 @@ class KeenonConnector(FleetConnector):
             client_secret=cfg.client_secret,
             verify_ssl=cfg.verify_ssl,
             timeout=cfg.request_timeout,
+            login_backoff_min_s=cfg.login_backoff_min_s,
+            login_backoff_max_s=cfg.login_backoff_max_s,
         )
 
         self._data_poller = DataPoller(

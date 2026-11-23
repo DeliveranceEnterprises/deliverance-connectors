@@ -52,6 +52,11 @@ class KeenonConfig(BaseSettings):
     client_secret: str
     verify_ssl: bool = True
     request_timeout: float = 30.0
+    # Keenon keeps one token per app, so logins are rationed: after repeated
+    # auth failures the next login waits login_backoff_min_s, doubling up to
+    # login_backoff_max_s.
+    login_backoff_min_s: float = 60.0
+    login_backoff_max_s: float = 900.0
     webhook_host: str = "0.0.0.0"
     webhook_port: int | None = None  # None disables the webhook receiver
 
