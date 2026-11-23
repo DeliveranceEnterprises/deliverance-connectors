@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Deliverance Enterprises
+#
+# SPDX-License-Identifier: MIT
+
+# SpatialAnnotation for the Allybot charging station.
+#
+# These values are per site and must be filled in before applying:
+#   <ACCOUNT_ID>       InOrbit account id.
+#   <LOCATION_TAG_ID>  id of the location-type tag of the site where the robot
+#                      operates (SpatialAnnotation requires a location tag).
+#   <DOCK_X>, <DOCK_Y> dock position in metres, in the map frame.
+#   <DOCK_THETA>       dock heading in radians.
+# Capture the coordinates from the robot pose while it is docked and charging.
+
+apiVersion: v0.1
+kind: SpatialAnnotation
+metadata:
+  id: allybot-cs
+  scope: tag/<ACCOUNT_ID>/<LOCATION_TAG_ID>
+spec:
+  type: waypoint
+  frameId: map
+  label: Allybot Charging Station
+  data:
+    x: <DOCK_X>
+    y: <DOCK_Y>
+    theta: <DOCK_THETA>

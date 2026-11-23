@@ -56,6 +56,7 @@ See the [allybot\_connector README](allybot_connector/README.md) for setup instr
 
 ```
 deliverance-connectors/
+├── account_cac/            # Account-level InOrbit resources shared by all connectors
 ├── keenon_connector/       # Keenon Cloud API connector
 │   ├── keenon_connector/   # Python package
 │   ├── cac/                # InOrbit Configuration-as-Code definitions

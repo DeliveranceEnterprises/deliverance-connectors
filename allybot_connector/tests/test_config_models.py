@@ -87,3 +87,13 @@ def test_allybot_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert config.base_url == "http://env-host:28080"
     assert config.username == "env-user"
+
+
+def test_min_relogin_seconds_defaults_to_60_and_can_be_set_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = AllybotConfig(base_url="http://localhost:28080", username="u", password="p")
+    assert cfg.min_relogin_seconds == 60.0
+    monkeypatch.setenv("INORBIT_ALLYBOT_MIN_RELOGIN_SECONDS", "120")
+    cfg = AllybotConfig(base_url="http://localhost:28080", username="u", password="p")
+    assert cfg.min_relogin_seconds == 120.0

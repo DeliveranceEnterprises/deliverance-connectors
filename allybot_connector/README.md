@@ -44,6 +44,26 @@ This connector implementation is based on the official publicly available Allybo
 - Annotation synchronization for waypoint positions between Allybot and InOrbit
 - Built on top of the [`inorbit-connector-python`](https://github.com/inorbit-ai/inorbit-connector-python) framework
 
+## Running alongside deliverance-integrations-allybot
+
+> [!IMPORTANT]
+> Give this connector its own, dedicated Allybot account. Do not share it with
+> `deliverance-integrations-allybot`, another instance of this connector or a
+> person using the Allybot phone app.
+
+The Ally Fleet cloud keeps one session per account: every login invalidates the
+token of every other session of the same account. Two processes on one account
+keep logging each other out, and each of them loses commands and data until it
+logs in again (which in turn logs the other one out).
+
+This connector limits the damage but cannot remove it: it logs in at most once
+every `min_relogin_seconds` (60 s by default, env
+`INORBIT_ALLYBOT_MIN_RELOGIN_SECONDS`; the integration has the same limit,
+`ALLYBOT_MIN_RELOGIN_SECONDS`), its open WebSocket keeps delivering after another
+login, and the REST status poll never logs in. A command sent while another
+process holds the session logs in again, which logs that process out. Only a
+dedicated account avoids the conflict.
+
 ## Requirements
 
 - Python 3.13 or later
@@ -71,6 +91,8 @@ uv pip install colorlog
 
 - Copy `config/fleet.example.yaml` to `config/my_fleet.yaml` and configure your robot fleet. Each robot needs an InOrbit `robot_id` and the corresponding Allybot `fleet_robot_id`.
 
+  Keep the word `allybot` in each robot's `robot_id` (as in `allybot-cleaner-1`) or in its optional display `name`. The Deliverance InOrbit integration (`deliverance-integrations-inorbit`) detects the vendor from the robot id plus the InOrbit name, so a robot with neither containing `allybot` gets no Allybot model, icon or battery in the Platform. The `robot_id` alone is enough, so with an `allybot-` id the `name` can be anything.
+
 - Optionally, configure the Allybot connector-specific settings via environment variables. Copy `config/example.env` to `config/.env` and fill in the values. Any `connector_config` fields can be set using the `INORBIT_ALLYBOT_` prefix (e.g., `INORBIT_ALLYBOT_FLEET_HOST`, `INORBIT_ALLYBOT_FLEET_USERNAME`). Environment variables are used as fallbacks when fields are missing from the YAML configuration. See `config/example.env` for reference. The `.env` file will be automatically loaded when the connector is run.
 
 - Set the `INORBIT_API_KEY` environment variable. You can get the API key for your account from InOrbit's [Developer Console](https://developer.inorbit.ai/docs#configuring-environment-variables).
@@ -79,6 +101,17 @@ uv pip install colorlog
 export INORBIT_API_KEY=your-api-key-here
 # Or place the value in the config/.env file
 ```
+
+## InOrbit Configuration
+
+`cac/` holds the Allybot-specific InOrbit resources (actions, data sources,
+status and incident definitions, preferences, spatial annotations). Fill in
+the per-site placeholders before applying them.
+
+The global Robot and Navigation dashboards are account-level resources shared
+by all connectors. They live in [`account_cac/`](../account_cac/README.md) at
+the repository root and are applied from there only; edit only the Allybot
+section of each.
 
 ## Deployment
 

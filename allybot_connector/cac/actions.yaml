@@ -7,17 +7,19 @@
 #
 # Cleaning area actions: one action per named area, task_id baked in.
 # Add more areas by duplicating the allybot-clean-* pattern below.
+# task_id is the Allybot task of the site the robot works in (from
+# /fleetapi/clean/list); set it per deployment.
 
 apiVersion: v0.1
 kind: ActionDefinition
 metadata:
-  id: allybot-clean-espaitec
+  id: allybot-clean-default-area
   scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
 spec:
   type: RunScript
-  label: "Clean: Espaitec"
+  label: "Clean: Default Area"
   group: Cleaning
-  description: Start the Espaitec cleaning task. Robot returns to dock when done.
+  description: Start the default area cleaning task. Robot returns to dock when done.
   confirmation:
     required: false
   lock: false

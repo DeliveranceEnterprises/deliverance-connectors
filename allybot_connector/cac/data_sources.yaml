@@ -117,7 +117,6 @@ metadata:
 spec:
   label: Battery
   unit: "%"
-  scale: 100
   source:
     keyValue:
       key: battery
@@ -169,6 +168,7 @@ metadata:
 spec:
   label: Task Progress
   unit: "%"
+  scale: 0.01
   source:
     keyValue:
       key: task_percentage
@@ -195,6 +195,7 @@ metadata:
 spec:
   label: Fresh Water
   unit: "%"
+  scale: 0.01
   source:
     keyValue:
       key: fresh_water
@@ -209,8 +210,21 @@ metadata:
 spec:
   label: Sewage Water
   unit: "%"
+  scale: 0.01
   source:
     keyValue:
       key: sewage_water
   timeline:
     fieldType: number
+---
+apiVersion: v0.1
+kind: DataSourceDefinition
+metadata:
+  id: allybot-robot-model
+  scope: tag/rnLasGAxn5CP7bj32/StdZGa32GmBLReFr
+spec:
+  label: Robot Model
+  source:
+    keyValue:
+      key: robot_model
+  timeline: {}
