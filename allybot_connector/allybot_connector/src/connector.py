@@ -293,9 +293,11 @@ class AllybotConnector(FleetConnector):
                 return None
         # Partial cleaning report - only the fields the App WS exposes.  These
         # ride along in mission_tracking.data and InOrbit prefixes them with
-        # "data_" in kpis/objects, where the Deliverance mapper rebuilds them
-        # into the cleaningStats report.  Electric/water consumption, effect and
-        # the coverage image need the robot's cleaning-report endpoint (TODO).
+        # "data_" in kpis/objects.  They are visible in InOrbit only: the
+        # Deliverance InOrbit integration drops the data_* fields except the
+        # time estimate, so plan_area / cleaned_area do not reach a platform
+        # cleaning report.  Electric/water consumption, effect and the coverage
+        # image need the robot's cleaning-report endpoint (TODO).
         data: dict = {"group": "Cleaning"}
         if state.plan_area is not None:
             data["plan_area"] = state.plan_area

@@ -84,10 +84,13 @@ class AllybotAppWebSocket:
     The connection is maintained automatically until ``stop()`` is called. The cloud
     keeps ONE session per account and validates the token only when the WebSocket
     opens: an open WebSocket keeps delivering after another login invalidates the
-    token, but one opened with an invalidated token is accepted and stays silent.
-    So when a ``relogin`` callable is given, it is awaited before EVERY reconnect to
-    get a live token, and a connection that stays silent is dropped and replaced.
-    The first connection uses the token the caller already obtained.
+    token, but a new one opened with an invalidated token does not. Measured against
+    the real cloud on 2026-11-21, the server accepts such a connection and closes it
+    after about 0.5 s; a connection that is accepted and then stays silent is also
+    handled, in case the server behaves that way. So when a ``relogin`` callable is
+    given, it is awaited before EVERY reconnect to get a live token, and a connection
+    that stays silent is dropped and replaced. The first connection uses the token
+    the caller already obtained.
     """
 
     def __init__(

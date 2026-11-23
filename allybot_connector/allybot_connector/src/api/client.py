@@ -108,9 +108,10 @@ class AllybotAPIClient:
 
         The App WebSocket validates the token only at its handshake, and the cloud
         keeps ONE session per account: any other login invalidates our token. A
-        WebSocket opened with an already-invalidated token is accepted but never
-        delivers anything. So the WebSocket calls this before every reconnect, which
-        guarantees it opens with a live token. The web-console login that ``login()``
+        WebSocket opened with an already-invalidated token delivers nothing: measured
+        on 2026-11-21 the server accepts it and closes it after about 0.5 s (the
+        WebSocket also handles one that stays open and silent). So the WebSocket calls
+        this before every reconnect, which guarantees it opens with a live token. The web-console login that ``login()``
         also tries is skipped: it uses a separate user list and fails for this account.
         """
         await self._mobile_login()

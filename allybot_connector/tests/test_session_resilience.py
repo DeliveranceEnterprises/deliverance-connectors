@@ -6,9 +6,9 @@
 
 The Ally Fleet cloud keeps ONE session per account and checks the token only when the
 WebSocket opens: an open WebSocket keeps delivering after another login invalidates the
-token, but one opened with an invalidated token is refused one way or another: measured
-live it was accepted and then closed by the server after about a second, or
-accepted and left silent. These tests run the real WebSocket client against a
+token, but a new one opened with an invalidated token is not: measured live on
+2026-11-21 it was accepted and closed by the server after about 0.5 s. A connection
+accepted and left silent is handled as well, in case the server does that. These tests run the real WebSocket client against a
 local server that imitates all of that, and check that the client logs in again before every
 reconnect, replaces a mute connection, does NOT log in needlessly for a robot that is simply
 off, and never logs the token.
@@ -62,7 +62,7 @@ class FakeCloud:
     - ``close_after_data``: delivers a frame and closes (a dropped connection)
     - ``close_at_once``: accepts and closes right away (a dead token, as seen live)
     - ``silent``: accepts the connection and never says anything, not even a keepalive
-      (a dead token, as seen live)
+      (a dead token, if the server ever leaves it open)
     - ``pongs_only``: answers pings but delivers no data (a robot that is switched off)
     - ``otherlogin``: sends an ``otherlogin`` frame, then behaves like ``data``
     - ``reject``: refuses the handshake with a 401, whose error text carries the URL
@@ -222,7 +222,7 @@ async def test_a_failed_login_is_retried_not_fatal(cloud: FakeCloud) -> None:
 
 
 async def test_a_mute_connection_is_replaced_by_one_with_a_fresh_token(cloud: FakeCloud) -> None:
-    """A WebSocket opened with an invalidated token is accepted but never delivers anything."""
+    """A WebSocket that is accepted but never delivers anything is replaced."""
     cloud.modes["DEAD"] = "silent"
     relogin = Relogin("T2")
     ws, state = _ws(cloud, "DEAD", relogin)
