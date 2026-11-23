@@ -112,6 +112,8 @@ class AllybotAppWebSocket:
         self._fleet_serial_to_robot_id = fleet_serial_to_robot_id
         self._stop_event = asyncio.Event()
         self._task: asyncio.Task | None = None
+        # work_status values already logged as never seen (one line per value per connector).
+        self._unseen_work_status_logged: set[str] = set()
 
     @property
     def _ws_url(self) -> str:
@@ -337,7 +339,6 @@ class AllybotAppWebSocket:
         state.last_ws_message = time.time()
 
     _KNOWN_WORK_STATUS = {"Charging", "Idle", "Operating", "Returning"}
-    _unseen_work_status_logged: set = set()
 
     def _note_unseen_work_status(self, work_status: str | None) -> None:
         """Log ONCE each work_status value this connector has never seen documented.

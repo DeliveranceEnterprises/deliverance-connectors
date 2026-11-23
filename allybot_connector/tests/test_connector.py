@@ -281,6 +281,7 @@ def test_spanish_work_status_is_normalised_and_keeps_mode_charging() -> None:
     ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
     ws._robot_states = connector._robot_states
     ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    ws._unseen_work_status_logged = set()
     state = connector._robot_states[ROBOT_ID]
 
     for raw in ("Charging", "Cargando", "CARGANDO", "Charging"):
@@ -307,6 +308,7 @@ def _ws_for(connector: AllybotConnector) -> AllybotAppWebSocket:
     ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
     ws._robot_states = connector._robot_states
     ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    ws._unseen_work_status_logged = set()
     return ws
 
 
@@ -458,6 +460,7 @@ def _ws_and_state(connector):
     ws = AllybotAppWebSocket.__new__(AllybotAppWebSocket)
     ws._robot_states = connector._robot_states
     ws._fleet_serial_to_robot_id = connector._fleet_serial_to_robot_id
+    ws._unseen_work_status_logged = set()
     return ws, connector._robot_states[ROBOT_ID]
 
 
@@ -502,9 +505,19 @@ def test_ordinary_work_status_never_reads_as_an_emergency() -> None:
 def test_an_unseen_work_status_is_logged_once(caplog) -> None:
     connector = _make_connector()
     ws, _ = _ws_and_state(connector)
-    AllybotAppWebSocket._unseen_work_status_logged.clear()
     with caplog.at_level(logging.WARNING):
         for _ in range(3):
             ws._on_device_status(_device_status_body("Something New"))
         ws._on_device_status(_device_status_body("Charging"))
     assert sum("never seen before" in r.message for r in caplog.records) == 1
+
+
+def test_unseen_work_status_log_is_kept_per_websocket_instance(caplog) -> None:
+    connector = _make_connector()
+    first, _ = _ws_and_state(connector)
+    second, _ = _ws_and_state(connector)
+    with caplog.at_level(logging.WARNING):
+        first._on_device_status(_device_status_body("Something New"))
+        second._on_device_status(_device_status_body("Something New"))
+    assert sum("never seen before" in r.message for r in caplog.records) == 2
+    assert first._unseen_work_status_logged is not second._unseen_work_status_logged
