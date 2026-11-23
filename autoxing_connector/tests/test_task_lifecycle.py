@@ -128,3 +128,71 @@ async def test_a_task_whose_taskobj_vanishes_is_completed_after_the_grace_period
     h = Harness(FakeClient([robot("T1"), robot(), robot(), robot(), robot()]))
     await h.run()
     assert h.missions == [("T1", "Executing")] * 3 + [("T1", "Completed")]
+
+
+# ---------------------------------------------------------------------------
+# Task detail fetch
+# ---------------------------------------------------------------------------
+
+
+async def test_the_detail_fetch_is_capped_and_spaced_across_polls() -> None:
+    h = Harness(FakeClient([robot("T1")] * 40, detail=None))
+    now = [0.0]
+    h.poller._clock = lambda: now[0]
+    call_times: list[float] = []
+    original = h.client.get_task
+
+    async def get_task(task_id):
+        call_times.append(now[0])
+        return await original(task_id)
+
+    h.client.get_task = get_task
+    while h.client.states:
+        await h.poll()
+        now[0] += 1.0
+    assert call_times == [0.0, 5.0, 15.0]
+    # after the last attempt the mission goes out without the detail
+    assert h.missions and h.missions[-1] == ("T1", "Executing")
+    assert h.published[-1]["mission_tracking"]["label"] == "T1"
+
+
+async def test_a_slow_detail_fetch_does_not_hold_up_the_poll() -> None:
+    release = asyncio.Event()
+    h = Harness(FakeClient([robot("T1")] * 5))
+
+    async def slow_get_task(task_id):
+        h.client.get_task_calls += 1
+        await release.wait()
+        return DETAIL
+
+    h.client.get_task = slow_get_task
+    for _ in range(3):
+        await asyncio.wait_for(h.poll(), timeout=1)
+    assert h.client.get_task_calls == 1  # one fetch in flight, not one per poll
+    assert h.missions == []  # still waiting for the detail
+    release.set()
+    for _ in range(3):
+        await asyncio.sleep(0)
+    await h.poll()
+    assert h.state.task_target_name == "Point A"
+    assert h.published[-1]["mission_tracking"]["label"] == "Point A"
+    await h.poller.stop()
+
+
+async def test_a_detail_that_arrives_after_the_task_ended_is_discarded() -> None:
+    release = asyncio.Event()
+    h = Harness(FakeClient([robot("T1"), robot("T1", finish=True), robot("T2")]))
+
+    async def slow_get_task(task_id):
+        if task_id == "T1":
+            await release.wait()
+        return DETAIL
+
+    h.client.get_task = slow_get_task
+    await h.poll()
+    await h.poll()  # T1 finishes and is closed while its detail is in flight
+    release.set()
+    await asyncio.sleep(0)
+    await h.poll()
+    assert h.missions[0] == ("T1", "Completed")
+    assert h.state.task_id == "T2"

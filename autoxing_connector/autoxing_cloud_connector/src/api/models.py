@@ -91,6 +91,7 @@ class RobotState:
     # InOrbit never sees the UUID as the mission label.
     _task_ready: bool = False
     _task_detail_attempts: int = 0
+    _task_detail_next_at: float = 0.0  # monotonic time before which no retry is sent
 
     # Cache of task_id → task_start_ts (epoch ms) for the current session.
     # If the API sends a false isFinish=True and the same task_id reappears,
@@ -130,6 +131,7 @@ class RobotState:
         self._task_absent_polls = 0
         self._task_ready = False
         self._task_detail_attempts = 0
+        self._task_detail_next_at = 0.0
 
     def close_task(self) -> None:
         """Forget the current task once its terminal mission has been published."""

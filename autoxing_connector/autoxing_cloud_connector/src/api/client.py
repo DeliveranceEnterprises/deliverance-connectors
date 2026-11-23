@@ -156,6 +156,10 @@ class AutoxingAPIClient:
 
     @_retry()
     async def _get(self, path: str, **kwargs) -> dict | list | None:
+        return await self._get_once(path, **kwargs)
+
+    async def _get_once(self, path: str, **kwargs) -> dict | list | None:
+        """GET without retries, for callers that pace their own retries."""
         await self._ensure_token()
         resp = await self._http.get(path, headers=self._api_headers(), **kwargs)
         resp.raise_for_status()
@@ -265,8 +269,9 @@ class AutoxingAPIClient:
             logger.warning("cancel_task(%s) failed: %s", task_id, exc)
 
     async def get_task(self, task_id: str) -> dict | None:
+        # A single attempt: the poller spaces and caps its own retries.
         try:
-            return await self._get(f"/task/v1.1/{task_id}")
+            return await self._get_once(f"/task/v1.1/{task_id}")
         except Exception as exc:
             logger.warning("get_task(%s) failed: %s", task_id, exc)
             return None

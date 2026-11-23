@@ -15,6 +15,12 @@ from .models import RobotState
 
 logger = logging.getLogger(__name__)
 
+# Task detail (GET /task/v1.1/{id}) is tried at most this many times per task,
+# the n-th retry waiting n * _TASK_DETAIL_RETRY_DELAY_S after the previous
+# failure. After that the mission goes out without it.
+_TASK_DETAIL_MAX_ATTEMPTS = 3
+_TASK_DETAIL_RETRY_DELAY_S = 5.0
+
 _CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "task_start_ts_cache.json")
 
 
@@ -56,6 +62,9 @@ class DataPoller:
         self._poll_interval = 1.0 / update_freq if update_freq > 0 else 1.0
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
+        self._clock = time.monotonic
+        # In-flight task detail fetches, one per robot at most.
+        self._detail_jobs: dict[str, asyncio.Task] = {}
         # Persistent cache: task_id → start_ts (epoch ms). Survives restarts so
         # the same task always gets the same missionId in InOrbit.
         self._ts_cache: dict[str, int] = _load_ts_cache()
@@ -80,6 +89,9 @@ class DataPoller:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        for job in self._detail_jobs.values():
+            job.cancel()
+        self._detail_jobs.clear()
 
     async def _run(self) -> None:
         while not self._stop_event.is_set():
@@ -129,32 +141,60 @@ class DataPoller:
                 # online even when the fleet list call failed.
                 if not list_entry:
                     state.online = True
-                # Fetch full task detail once per task to get the real
-                # destination (taskPts), return point (backPt) and origin
-                # (curPt). taskObj.target is the RETURN point, not the
-                # destination, so we need the detail endpoint.
-                if state.task_id and state.task_detail_fetched != state.task_id:
-                    try:
-                        detail = await self._client.get_task(state.task_id)
-                        if detail:
-                            self._apply_task_detail(state, detail)
-                            state.task_detail_fetched = state.task_id
-                            state._task_ready = True
-                        else:
-                            state._task_detail_attempts += 1
-                            if state._task_detail_attempts >= 3:
-                                state._task_ready = True
-                    except Exception as exc:
-                        logger.debug("Task detail fetch failed task=%s: %s", state.task_id, exc)
-                        state._task_detail_attempts += 1
-                        if state._task_detail_attempts >= 3:
-                            state._task_ready = True
+                self._maybe_fetch_task_detail(state)
             else:
                 state.api_connected = False
                 if not list_entry:
                     state.online = False
 
             state.last_update = time.time()
+
+    def _maybe_fetch_task_detail(self, state: RobotState) -> None:
+        """Start a background fetch of the task detail if one is due.
+
+        The detail holds the real destination (taskPts), return point (backPt)
+        and origin (curPt); taskObj.target is the RETURN point. The fetch runs
+        as its own task so a slow or failing call never holds up the poll of
+        the other robots, and it is capped and spaced so a task without
+        detail does not cost one request per robot per poll.
+        """
+        task_id = state.task_id
+        if not task_id or state._task_ready or state.task_detail_fetched == task_id:
+            return
+        job = self._detail_jobs.get(task_id)
+        if job and not job.done():
+            return
+        if state._task_detail_attempts >= _TASK_DETAIL_MAX_ATTEMPTS:
+            state._task_ready = True
+            return
+        if self._clock() < state._task_detail_next_at:
+            return
+        state._task_detail_attempts += 1
+        self._detail_jobs[task_id] = asyncio.create_task(
+            self._fetch_task_detail(state, task_id), name=f"autoxing-task-detail-{task_id}"
+        )
+
+    async def _fetch_task_detail(self, state: RobotState, task_id: str) -> None:
+        try:
+            detail = await self._client.get_task(task_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.debug("Task detail fetch failed task=%s: %s", task_id, exc)
+            detail = None
+        finally:
+            self._detail_jobs.pop(task_id, None)
+        if state.task_id != task_id:
+            return  # the robot has moved on to another task
+        if detail:
+            self._apply_task_detail(state, detail)
+            state.task_detail_fetched = task_id
+            state._task_ready = True
+        elif state._task_detail_attempts >= _TASK_DETAIL_MAX_ATTEMPTS:
+            logger.info("No task detail for task=%s after %d attempts", task_id, state._task_detail_attempts)
+            state._task_ready = True
+        else:
+            state._task_detail_next_at = self._clock() + _TASK_DETAIL_RETRY_DELAY_S * state._task_detail_attempts
 
     def _apply_state(self, state: RobotState, raw: dict) -> None:
         x = raw.get("x")
