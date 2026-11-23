@@ -36,4 +36,7 @@ connector_config:
 fleet:
   - robot_id: ezviz-front-door
     fleet_robot_id: "L45505505"   # ← Ezviz device serial (9 chars)
+    # Camera model published as the robot_model key value. Defaults to
+    # "Ezviz Camera". "Ezviz " is prepended when missing ("H6C" → "Ezviz H6C").
+    robot_model: "Ezviz H6C"
     channel: 1
