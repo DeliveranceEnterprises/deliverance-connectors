@@ -635,9 +635,9 @@ spec:
       type: listData
     - config:
         actionIds:
-        - keenon-send-to-mesa-1
-        - keenon-send-to-mesa-2
-        - keenon-send-to-mesa-3
+        - keenon-send-to-table-1
+        - keenon-send-to-table-2
+        - keenon-send-to-table-3
         - keenon-return-to-origin
         - keenon-cancel-task
         - keenon-open-cabin
