@@ -2,19 +2,19 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ActionDefinition objects -- WDC (Agent SDK, robot 223623373)
-# Account: Deliverance (rnLasGAxn5CP7bj32)
+# ActionDefinition objects -- WDC (Agent SDK)
+# Replace <ACCOUNT_ID> and <ROBOT_ID> before applying (see README).
 #
 # Unlike the Edge SDK connectors in this repo (Keenon, Allybot, Autoxing --
 # type: RunScript, InOrbit calls back into the connector process), this
-# robot's Agent Core runs ON the robot itself and reads real ROS topics, so
+# robot's Agent Core reads ROS topics published by the bridge node, so
 # actions use type: PublishToTopic instead -- InOrbit's CustomCommandsAgentlet
 # publishes the given string to the ROS topic "inorbit/custom_command"
 # (confirmed against the agent's own shipped source), and
 # src/wdc_bridge_node.py's _on_custom_command() subscribes to it and
 # dispatches to the WDC local API.
 #
-# Scoped to the robot directly (robot/rnLasGAxn5CP7bj32/223623373), not a
+# Scoped to the robot directly (robot/<ACCOUNT_ID>/<ROBOT_ID>), not a
 # tag -- WDC has no dedicated hardware tag like Keenon/Allybot/Autoxing do,
 # it only carries generic tags.
 #
@@ -27,7 +27,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: wdc-stop
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   type: PublishToTopic
   label: Stop
@@ -48,7 +48,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: wdc-charge
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   type: PublishToTopic
   label: Go Charge
@@ -67,7 +67,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: wdc-goto-a
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   type: PublishToTopic
   label: "Go to Point A"
@@ -86,7 +86,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: wdc-goto-b
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   type: PublishToTopic
   label: "Go to Point B"
@@ -105,7 +105,7 @@ apiVersion: v0.1
 kind: ActionDefinition
 metadata:
   id: wdc-goto-home
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   type: PublishToTopic
   label: "Go to Home"

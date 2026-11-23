@@ -2,7 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-# MissionTracking -- WDC (Agent SDK, robot 223623373)
+# MissionTracking -- WDC (Agent SDK)
+# Replace <ACCOUNT_ID> and <ROBOT_ID> before applying (see README).
 # Makes InOrbit's interpretation of the bridge's mission_tracking JSON
 # explicit instead of relying on automatic inference. src/wdc_bridge_node.py
 # publishes the standard mission_tracking key-value with state values
@@ -18,7 +19,7 @@ apiVersion: v0.1
 kind: MissionTracking
 metadata:
   id: all
-  scope: robot/rnLasGAxn5CP7bj32/223623373
+  scope: robot/<ACCOUNT_ID>/<ROBOT_ID>
 spec:
   processingType:
     - api

@@ -98,6 +98,23 @@ The `cac/` directory has the config-as-code for the robot:
 - `mission_tracking.yaml`: how InOrbit interprets the `mission_tracking` key
   value.
 
+Both files are scoped to one robot and use the placeholders `<ACCOUNT_ID>`
+(the InOrbit account id) and `<ROBOT_ID>` (the InOrbit robot id of the WDC).
+Substitute them before applying. `inorbit apply -f -` does not accept stdin,
+so write to a temporary file first:
+
+```bash
+for f in actions mission_tracking; do
+  sed -e "s/<ACCOUNT_ID>/${INORBIT_ACCOUNT_ID}/g" \
+      -e "s/<ROBOT_ID>/${WDC_INORBIT_ROBOT_ID}/g" \
+      "cac/$f.yaml" > "/tmp/wdc_$f.yaml"
+  inorbit apply -f "/tmp/wdc_$f.yaml"
+done
+```
+
+If you add points to the points file, add the matching `GOTO_<NAME>` actions
+to `actions.yaml` before applying it.
+
 ## Notes and limitations
 
 - The coordinates in the points file are copied by hand from the robot's
