@@ -22,6 +22,11 @@ class AllybotRobotConfig(RobotConfig):
             and ``serial`` in App WS ``device_position`` messages.
         name: Display name shown in InOrbit Fleet Status. Optional; if set,
             overrides the default robot_id that the framework publishes.
+
+    The Deliverance InOrbit integration detects the vendor from ``robot_id`` plus
+    the InOrbit name, so the word ``allybot`` must appear in at least one of them.
+    A ``robot_id`` such as ``allybot-cleaner-1`` is enough on its own; otherwise
+    keep ``allybot`` in ``name``.
     """
 
     fleet_robot_id: str  # UUID string
