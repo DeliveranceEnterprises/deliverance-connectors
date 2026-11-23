@@ -193,7 +193,7 @@ uv run pytest
 uv run ruff check
 ```
 
-Each connector package ships with unit tests (pytest + pytest-httpx for HTTP mocking) and a ruff linting configuration, except the Ezviz connector, which has no unit tests yet. See the individual `CONTRIBUTING.md` files for contributor guidelines.
+The Keenon, Allybot, AutoXing and TurtleBot connectors ship with pytest unit tests; Keenon and Allybot also mock their HTTP APIs with pytest-httpx. The Ezviz connector has no unit tests yet (`scripts/test_camera.py` is a manual check against a real camera). All the uv-managed connectors carry a ruff configuration. The Keenon, Allybot and AutoXing connectors include a `CONTRIBUTING.md` with contributor guidelines.
 
 The cloud connectors (Allybot, Keenon, AutoXing) were generated from the [InOrbit Connector Cookiecutter](https://github.com/inorbit-ai/inorbit-connector-cookiecutter) and built on the [`inorbit-connector-python`](https://github.com/inorbit-ai/inorbit-connector-python) framework.
 
