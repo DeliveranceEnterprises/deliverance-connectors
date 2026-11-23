@@ -80,6 +80,17 @@ export INORBIT_API_KEY=your-api-key-here
 # Or place the value in the config/.env file
 ```
 
+## InOrbit Configuration
+
+`cac/` holds the Allybot-specific InOrbit resources (actions, data sources,
+status and incident definitions, preferences, spatial annotations). Fill in
+the per-site placeholders before applying them.
+
+The global Robot and Navigation dashboards are account-level resources shared
+by all connectors. They live in [`account_cac/`](../account_cac/README.md) at
+the repository root and are applied from there only; edit only the Allybot
+section of each.
+
 ## Deployment
 
 Once all dependencies are installed and the configuration is complete, the Connector can be run as a command.

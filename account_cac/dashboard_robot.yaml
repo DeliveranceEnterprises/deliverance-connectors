@@ -2,16 +2,17 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Global Robot dashboard - adds an Allybot-specific section conditioned on the
-# Allybot hardware tag. Only robots with that tag will see this section.
-# All existing sections of d-Robot-lLybVa are preserved as-is.
+# Global Robot dashboard (account-level, shared by all connectors).
+# Holds the common sections plus one section per vendor, each conditioned on
+# that vendor's hardware tag; only robots with that tag see the section.
+# Each connector edits only its own section.
 #
-# WARNING: this file contains the full dashboard spec including sections for
-# other robots. Do not remove other robots' sections when applying.
+# WARNING: this file is the full dashboard spec. Do not remove other vendors'
+# sections when applying.
 #
 # Apply with:
-#   sed -e "s/<ACCOUNT_ID>/rnLasGAxn5CP7bj32/g" \
-#       cac/dashboard_robot.yaml > /tmp/robot.yaml
+#   sed -e "s/<ACCOUNT_ID>/your-account-id/g" \
+#       account_cac/dashboard_robot.yaml > /tmp/robot.yaml
 #   yes | inorbit apply -f /tmp/robot.yaml
 
 apiVersion: v0.1

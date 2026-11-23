@@ -2,14 +2,25 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Global Navigation dashboard - adds Keenon-specific section.
-# Preferences/control widget NOT touched - already working for Keenon.
+# Global Navigation dashboard (account-level, shared by all connectors).
+# Holds the common sections plus one section per vendor, each conditioned on
+# that vendor's hardware tag. Each connector edits only its own section.
+# The control widget action list (Preferences) is not defined here; a
+# connector that needs one keeps it in its own cac/preferences.yaml.
+#
+# WARNING: this file is the full dashboard spec. Do not remove other vendors'
+# sections when applying.
+#
+# Apply with:
+#   sed -e "s/<ACCOUNT_ID>/your-account-id/g" \
+#       account_cac/dashboard_navigation.yaml > /tmp/navigation.yaml
+#   yes | inorbit apply -f /tmp/navigation.yaml
 
 apiVersion: v0.1
 kind: DashboardDefinition
 metadata:
   id: d-Navigation-Z8YZAb
-  scope: account/rnLasGAxn5CP7bj32
+  scope: account/<ACCOUNT_ID>
 spec:
   label: Navigation
   order: 3
