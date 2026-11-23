@@ -10,7 +10,7 @@
 apiVersion: v0.1
 kind: DashboardDefinition
 metadata:
-  id: turtlebotCameraTest20260522
+  id: turtlebot-navigation
   scope: account/<ACCOUNT_ID>
 spec:
   label: TurtleBot Navigation
