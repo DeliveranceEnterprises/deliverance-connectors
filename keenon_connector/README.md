@@ -99,6 +99,8 @@ The Connector can be run as a containerized application using Docker Compose:
 
 The Docker Compose setup supports environment variable configuration via `config/.env` and allows running multiple connector instances. See `docker/docker-compose.example.yaml` for detailed configuration options.
 
+The `run.sh` script wraps the same Compose setup. `./run.sh up` builds the image and starts the connector in the background, `./run.sh logs` follows its logs and `./run.sh down` stops it. It expects `config/.env` and `config/my_fleet.yaml`, and it uses `docker/docker-compose.yaml` when that file exists and the example file otherwise. Run `./run.sh --help` for the full list of commands.
+
 ### Running alongside deliverance-integrations-keenon
 
 This connector and the `deliverance-integrations-keenon` service both talk to the Keenon Cloud API. When both run against the same Keenon account:
