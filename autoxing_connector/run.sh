@@ -24,7 +24,7 @@
 set -euo pipefail
 
 NAME="AutoXing"
-PROJECT="autoxing-connector"
+PROJECT="deliverance-autoxing-connector"
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 

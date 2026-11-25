@@ -24,7 +24,7 @@
 set -euo pipefail
 
 NAME="Keenon"
-PROJECT="keenon-connector"
+PROJECT="deliverance-keenon-connector"
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 

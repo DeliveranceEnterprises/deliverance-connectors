@@ -24,7 +24,7 @@
 set -euo pipefail
 
 NAME="Allybot"
-PROJECT="allybot-connector"
+PROJECT="deliverance-allybot-connector"
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
